@@ -25,7 +25,7 @@ export function ItemsPage() {
   const [selected, setSelected] = useState<Set<DataCat>>(new Set())
   const [q, setQ] = useState('')
   const [limit, setLimit] = useState(PAGE)
-  const [filter, setFilter] = useState<'all' | 'owned' | 'unowned' | 'wishlist'>('all')
+  const [filter, setFilter] = useState<'all' | 'owned' | 'unowned' | 'wishlist' | 'catalog'>('all')
   const [reformOnly, setReformOnly] = useState(false)
   const [sortBy, setSortBy] = useState<'default' | 'name'>('default')
   const [detail, setDetail] = useState<Row | null>(null)
@@ -77,6 +77,11 @@ export function ItemsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cats.join(','), queries.map((qr) => qr.data).join(',')])
 
+  const acq = (r: DetailItem) => (r.availability ?? []).map((a) => tSource(a.from)).join(', ')
+  const inCatalog = (r: DetailItem) =>
+    (r.availability ?? []).some((a) => /Nook|catalog|Shopping/i.test(a.from)) ||
+    (r.buy ?? []).some((b) => b.price > 0)
+
   const filtered = useMemo(() => {
     let rows = data
     if (q.trim()) {
@@ -86,7 +91,8 @@ export function ItemsPage() {
       )
     }
     if (reformOnly) rows = rows.filter((r) => r.customizable)
-    if (filter === 'unowned') rows = rows.filter((r) => !map[r.name]?.owned)
+    if (filter === 'catalog') rows = rows.filter((r) => inCatalog(r))
+    else if (filter === 'unowned') rows = rows.filter((r) => !map[r.name]?.owned)
     else if (filter !== 'all') rows = rows.filter((r) => map[r.name]?.[filter])
     return rows
   }, [data, q, reformOnly, filter, map, ko])
@@ -99,11 +105,6 @@ export function ItemsPage() {
 
   const shown = sorted.slice(0, limit)
   const ownedCount = data.filter((r) => map[r.name]?.owned).length
-
-  const acq = (r: DetailItem) => (r.availability ?? []).map((a) => tSource(a.from)).join(', ')
-  const inCatalog = (r: DetailItem) =>
-    (r.availability ?? []).some((a) => /Nook|catalog|Shopping/i.test(a.from)) ||
-    (r.buy ?? []).some((b) => b.price > 0)
 
   return (
     <div>
@@ -130,6 +131,7 @@ export function ItemsPage() {
           <option value="owned">{ui.owned}</option>
           <option value="unowned">미보유</option>
           <option value="wishlist">{ui.wishlist}</option>
+          <option value="catalog">카탈로그 등록가능</option>
         </select>
         <select
           value={sortBy}
