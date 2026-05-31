@@ -27,10 +27,23 @@ export function ItemsPage() {
   const [limit, setLimit] = useState(PAGE)
   const [filter, setFilter] = useState<'all' | 'owned' | 'wishlist'>('all')
   const [reformOnly, setReformOnly] = useState(false)
+  const [sortBy, setSortBy] = useState<'default' | 'name'>('default')
   const [detail, setDetail] = useState<Row | null>(null)
   const canSave = useCanSave()
   const { map, toggle } = useItemCollection()
   const ko = useKoNamesMulti(DATA_CATS)
+
+  // 이름 한글화 ((fake)/(real) 접미사 처리 포함)
+  const itemKo = (r: Row): string => {
+    const direct = ko(r.name, r.__cat)
+    if (direct !== r.name) return direct
+    const m = /^(.*?)\s*\((fake|real)\)$/i.exec(r.name)
+    if (m) {
+      const base = ko(m[1], r.__cat)
+      if (base !== m[1]) return base + (/fake/i.test(m[2]) ? ' (위작)' : ' (진품)')
+    }
+    return direct
+  }
 
   // 'all'이면 7개 모두, 아니면 선택 카테고리만 로드
   const cats: DataCat[] = cat === 'all' ? DATA_CATS : [cat]
@@ -68,20 +81,14 @@ export function ItemsPage() {
     return rows
   }, [data, q, reformOnly, filter, map, ko])
 
-  const shown = filtered.slice(0, limit)
-  const ownedCount = data.filter((r) => map[r.name]?.owned).length
+  const sorted = useMemo(() => {
+    if (sortBy !== 'name') return filtered
+    return [...filtered].sort((a, b) => itemKo(a).localeCompare(itemKo(b), 'ko'))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtered, sortBy, ko])
 
-  // 이름 한글화 ((fake)/(real) 접미사 처리 포함)
-  const itemKo = (r: Row): string => {
-    const direct = ko(r.name, r.__cat)
-    if (direct !== r.name) return direct
-    const m = /^(.*?)\s*\((fake|real)\)$/i.exec(r.name)
-    if (m) {
-      const base = ko(m[1], r.__cat)
-      if (base !== m[1]) return base + (/fake/i.test(m[2]) ? ' (위작)' : ' (진품)')
-    }
-    return direct
-  }
+  const shown = sorted.slice(0, limit)
+  const ownedCount = data.filter((r) => map[r.name]?.owned).length
 
   const acq = (r: DetailItem) => (r.availability ?? []).map((a) => tSource(a.from)).join(', ')
   const inCatalog = (r: DetailItem) =>
@@ -122,6 +129,14 @@ export function ItemsPage() {
           <option value="all">{ui.all}</option>
           <option value="owned">{ui.owned}</option>
           <option value="wishlist">{ui.wishlist}</option>
+        </select>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+          className="rounded-xl border border-leaf-200 bg-white px-3 py-2 text-sm dark:border-leaf-700 dark:bg-leaf-800"
+        >
+          <option value="default">기본 정렬</option>
+          <option value="name">가나다순</option>
         </select>
         <label className="flex items-center gap-1.5 text-sm">
           <input

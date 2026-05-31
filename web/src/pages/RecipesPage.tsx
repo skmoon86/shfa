@@ -27,6 +27,7 @@ export function RecipesPage() {
   const [source, setSource] = useState<string>('')
   const [rcat, setRcat] = useState<string>('')
   const [onlyTodo, setOnlyTodo] = useState(false)
+  const [sortBy, setSortBy] = useState<'default' | 'name'>('default')
   const canSave = useCanSave()
   const { learned, toggle } = useRecipeProgress()
   const ko = useKoNames('recipes')
@@ -61,8 +62,11 @@ export function RecipesPage() {
       rows = rows.filter((r) => catOf(r.name) === rcat)
     }
     if (onlyTodo) rows = rows.filter((r) => !learned.has(r.name))
+    if (sortBy === 'name') {
+      rows = [...rows].sort((a, b) => ko(a.name).localeCompare(ko(b.name), 'ko'))
+    }
     return rows
-  }, [data, q, source, rcat, onlyTodo, learned, ko, catOf])
+  }, [data, q, source, rcat, onlyTodo, learned, ko, catOf, sortBy])
 
   const learnedCount = data.filter((r) => learned.has(r.name)).length
 
@@ -103,6 +107,14 @@ export function RecipesPage() {
                 {tSource(s)}
               </option>
             ))}
+          </select>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+            className="rounded-xl border border-leaf-200 bg-white px-3 py-2 text-sm dark:border-leaf-700 dark:bg-leaf-800"
+          >
+            <option value="default">기본 정렬</option>
+            <option value="name">가나다순</option>
           </select>
           <label className="flex items-center gap-1.5 text-sm">
             <input
