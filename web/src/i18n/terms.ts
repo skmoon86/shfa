@@ -111,18 +111,22 @@ export const theme: Record<string, string> = {
   Stylish: '스타일리시', Supermarket: '슈퍼마켓', Workshop: '작업실',
 }
 
-// 출현 월 문자열 한글화: "All year"→연중, "March – June"→"3월–6월"
-const MONTH_FULL: Record<string, string> = {
-  January: '1월', February: '2월', March: '3월', April: '4월', May: '5월',
-  June: '6월', July: '7월', August: '8월', September: '9월', October: '10월',
-  November: '11월', December: '12월',
-}
+// 출현 월 문자열 한글화: "All year"→연중, "May – Oct"→"5월–10월"
+// Nookipedia는 축약 월(Jan, Mar, Oct…)을 사용하므로 전체/축약 모두 처리.
+const MONTH_PAIRS: [string, string][] = [
+  ['January', '1월'], ['February', '2월'], ['March', '3월'], ['April', '4월'],
+  ['August', '8월'], ['September', '9월'], ['October', '10월'],
+  ['November', '11월'], ['December', '12월'], ['June', '6월'], ['July', '7월'],
+  ['Sept', '9월'], ['Jan', '1월'], ['Feb', '2월'], ['Mar', '3월'], ['Apr', '4월'],
+  ['Jun', '6월'], ['Jul', '7월'], ['Aug', '8월'], ['Sep', '9월'], ['Oct', '10월'],
+  ['Nov', '11월'], ['Dec', '12월'], ['May', '5월'],
+]
 export function fmtMonths(s?: string): string {
   if (!s) return ''
   if (/all year/i.test(s)) return '연중'
   let out = s
-  for (const [en, ko] of Object.entries(MONTH_FULL)) {
-    out = out.replace(new RegExp(en, 'g'), ko)
+  for (const [en, ko] of MONTH_PAIRS) {
+    out = out.replace(new RegExp(`\\b${en}\\b`, 'g'), ko)
   }
   return out.replace(/\s*[–-]\s*/g, '–')
 }
@@ -138,14 +142,20 @@ export function fmtTime(s?: string): string {
     .replace(/;/g, ', ')
 }
 
-// 범용 변환기: 사전에 없으면 원문 유지
+// 범용 변환기: 정확 매칭 → 대소문자 무시 → 원문 유지
+function lookup(map: Record<string, string>, v: string): string {
+  if (map[v]) return map[v]
+  const lower = v.toLowerCase()
+  const hit = Object.keys(map).find((k) => k.toLowerCase() === lower)
+  return hit ? map[hit] : v
+}
 export function tr(map: Record<string, string>, v?: string): string {
   if (!v) return ''
-  return map[v] ?? v
+  return lookup(map, v)
 }
 
 // 배열용
 export function trList(map: Record<string, string>, arr?: string[]): string {
   if (!arr || arr.length === 0) return ''
-  return arr.map((x) => map[x] ?? x).join(', ')
+  return arr.map((x) => lookup(map, x)).join(', ')
 }

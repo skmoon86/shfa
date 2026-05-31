@@ -1,5 +1,5 @@
 import type { Furniture, Variation, PriceEntry, Availability } from '../lib/nookipedia'
-import { ui, tSource } from '../i18n/ko'
+import { ui, tSource, tNote } from '../i18n/ko'
 import {
   tr,
   trList,
@@ -89,7 +89,7 @@ export function ItemDetailModal({
               {item.availability.map((a, i) => (
                 <li key={i}>
                   • {tSource(a.from)}
-                  {a.note ? <span className="text-leaf-400"> — {a.note}</span> : ''}
+                  {a.note ? <span className="text-leaf-400"> — {tNote(a.note)}</span> : ''}
                 </li>
               ))}
             </ul>

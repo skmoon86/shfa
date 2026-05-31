@@ -16,7 +16,7 @@ const MAP = {
   art: ['Artwork'],
   recipes: ['Recipes'],
   villagers: ['Villagers'],
-  furniture: ['Housewares', 'Wall-mounted', 'Ceiling Decor', 'Miscellaneous', 'Interior Structures'],
+  furniture: ['Housewares', 'Wall-mounted', 'Ceiling Decor', 'Miscellaneous', 'Interior Structures', 'Artwork'],
   clothing: ['Tops', 'Bottoms', 'Dress-Up', 'Headwear', 'Accessories', 'Socks', 'Shoes', 'Bags', 'Clothing Other'],
   interior: ['Floors', 'Wallpaper', 'Rugs'],
   tools: ['Tools-Goods'],

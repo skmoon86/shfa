@@ -71,6 +71,18 @@ export function ItemsPage() {
   const shown = filtered.slice(0, limit)
   const ownedCount = data.filter((r) => map[r.name]?.owned).length
 
+  // 이름 한글화 ((fake)/(real) 접미사 처리 포함)
+  const itemKo = (r: Row): string => {
+    const direct = ko(r.name, r.__cat)
+    if (direct !== r.name) return direct
+    const m = /^(.*?)\s*\((fake|real)\)$/i.exec(r.name)
+    if (m) {
+      const base = ko(m[1], r.__cat)
+      if (base !== m[1]) return base + (/fake/i.test(m[2]) ? ' (위작)' : ' (진품)')
+    }
+    return direct
+  }
+
   const acq = (r: DetailItem) => (r.availability ?? []).map((a) => tSource(a.from)).join(', ')
   const inCatalog = (r: DetailItem) =>
     (r.availability ?? []).some((a) => /Nook|catalog|Shopping/i.test(a.from)) ||
@@ -154,7 +166,7 @@ export function ItemsPage() {
                     onClick={() => setDetail(r)}
                     className="mt-2 text-left text-sm font-semibold hover:text-leaf-500"
                   >
-                    {ko(r.name, r.__cat)}
+                    {itemKo(r)}
                   </button>
                   <div className="mt-1 text-xs text-leaf-500">
                     💰 {fmtBells(r.sell)} 벨
@@ -202,7 +214,7 @@ export function ItemsPage() {
 
       <ItemDetailModal
         item={detail}
-        title={detail ? ko(detail.name, detail.__cat) : undefined}
+        title={detail ? itemKo(detail) : undefined}
         onClose={() => setDetail(null)}
       />
     </div>

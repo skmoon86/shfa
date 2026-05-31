@@ -210,6 +210,29 @@ export const sourceLabel: Record<string, string> = {
   'lucky red envelope': '세뱃돈 봉투',
   'otoshidama envelope': '세뱃돈 봉투',
   'bokjumeoni lucky pouch': '복주머니',
+  // 갸르송(Redd) 관련
+  Redd: '갸르송',
+  "Redd's Co-Op": '갸르송 협동조합',
+  "Jolly Redd's Treasure Trawler": '갸르송의 보물선',
+  // 기타
+  Gift: '선물',
+  mail: '우편',
+}
+
+// 입수처 비고(note) 흔한 값
+export const noteLabel: Record<string, string> = {
+  mailbox: '우편함',
+  'mystery island': '신비한 섬',
+  'mystery islands': '신비한 섬',
+  crafting: '제작',
+  'high friendship': '높은 친밀도',
+  birthday: '생일',
+}
+export function tNote(note?: string): string {
+  if (!note) return ''
+  const lower = note.toLowerCase()
+  const hit = Object.keys(noteLabel).find((k) => k.toLowerCase() === lower)
+  return hit ? noteLabel[hit] : note
 }
 
 // 패턴 기반 변환(꽃/나무/작물 등 규칙적 항목)
