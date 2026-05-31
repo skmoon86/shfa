@@ -142,7 +142,7 @@ export function CritterpediaPage() {
               <div key={r.name} className="card flex flex-col p-3">
                 <div className="flex h-24 items-center justify-center">
                   <img
-                    src={(r as Critter).render_url || r.image_url}
+                    src={r.image_url || (r as Critter).render_url}
                     alt={r.name}
                     loading="lazy"
                     className="max-h-24 object-contain"
