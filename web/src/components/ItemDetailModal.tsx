@@ -8,7 +8,7 @@ import {
   theme as themeKo,
   color as colorKo,
 } from '../i18n/terms'
-import { fmtBells, fmtBuy } from '../lib/format'
+import { fmtBells, fmtBuy, buyDetail } from '../lib/format'
 import { Sheet } from './Sheet'
 
 // 여러 카테고리를 느슨하게 받기 위한 공통 형태
@@ -95,6 +95,17 @@ export function ItemDetailModal({
             </ul>
           ) : (
             <p className="text-sm text-leaf-400">정보 없음</p>
+          )}
+          {/* 상세 획득 방법: 구매 통화별 실제 구매처 + 가격 */}
+          {buyDetail(item.buy).length > 0 && (
+            <div className="mt-2 space-y-0.5 border-t border-leaf-100 pt-2 dark:border-leaf-700">
+              <div className="text-xs font-semibold text-leaf-500">상세 획득 방법</div>
+              {buyDetail(item.buy).map((d, i) => (
+                <div key={i} className="text-sm text-leaf-600 dark:text-sand-50">
+                  🛒 {d.label} — {d.price}
+                </div>
+              ))}
+            </div>
           )}
           <div className="mt-2">
             {(item.availability ?? []).some((a) => /Nook|catalog|Shopping/i.test(a.from)) ||

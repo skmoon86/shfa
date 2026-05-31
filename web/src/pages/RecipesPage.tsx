@@ -8,6 +8,7 @@ import { Spinner, ErrorState, EmptyState } from '../components/states'
 import { SearchBar } from '../components/SearchBar'
 import { ProgressBar } from '../components/ProgressBar'
 import { CategoryTabs } from '../components/CategoryTabs'
+import { RecipeDetailModal } from '../components/RecipeDetailModal'
 import { ui, tSource } from '../i18n/ko'
 import { fmtBells } from '../lib/format'
 
@@ -28,6 +29,7 @@ export function RecipesPage() {
   const [rcats, setRcats] = useState<Set<string>>(new Set())
   const [onlyTodo, setOnlyTodo] = useState(false)
   const [sortBy, setSortBy] = useState<'default' | 'name'>('default')
+  const [detail, setDetail] = useState<Recipe | null>(null)
   const canSave = useCanSave()
   const { learned, toggle } = useRecipeProgress()
   const ko = useKoNames('recipes')
@@ -137,15 +139,25 @@ export function RecipesPage() {
             const isLearned = learned.has(r.name)
             return (
               <div key={r.name} className="card flex gap-3 p-3">
-                <img
-                  src={r.image_url}
-                  alt={r.name}
-                  loading="lazy"
-                  className="h-16 w-16 flex-shrink-0 object-contain"
-                />
+                <button
+                  onClick={() => setDetail(r)}
+                  className="h-16 w-16 flex-shrink-0"
+                >
+                  <img
+                    src={r.image_url}
+                    alt={r.name}
+                    loading="lazy"
+                    className="h-16 w-16 object-contain"
+                  />
+                </button>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="text-sm font-semibold">{ko(r.name)}</div>
+                    <button
+                      onClick={() => setDetail(r)}
+                      className="text-left text-sm font-semibold hover:text-leaf-500"
+                    >
+                      {ko(r.name)}
+                    </button>
                   </div>
                   <div className="mt-1 flex flex-wrap gap-1">
                     {(r.materials ?? []).map((m) => (
@@ -172,6 +184,12 @@ export function RecipesPage() {
           })}
         </div>
       )}
+
+      <RecipeDetailModal
+        recipe={detail}
+        title={detail ? ko(detail.name) : undefined}
+        onClose={() => setDetail(null)}
+      />
     </div>
   )
 }
