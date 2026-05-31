@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueries } from '@tanstack/react-query'
 import { nookipedia, type Recipe } from '../lib/nookipedia'
+import type { DetailItem } from '../components/ItemDetailModal'
 import { useRecipeProgress } from '../hooks/useProgress'
 import { useKoNames } from '../hooks/useKoNames'
 import { useCanSave, ToggleButton } from '../components/Toggle'
@@ -11,6 +12,10 @@ import { CategoryTabs } from '../components/CategoryTabs'
 import { RecipeDetailModal } from '../components/RecipeDetailModal'
 import { ui, tSource } from '../i18n/ko'
 import { fmtBells } from '../lib/format'
+
+// 레시피로 제작되는 결과물 아이템을 이름으로 찾기 위해 조회하는 카테고리
+type DataCat = 'furniture' | 'interior' | 'tools' | 'items' | 'photos' | 'gyroids'
+const ITEM_CATS: DataCat[] = ['furniture', 'interior', 'tools', 'items', 'photos', 'gyroids']
 
 // 레시피 대분류(가구/벽걸이·천장/벽지·바닥·러그/도구/설비/요리/잡화)
 const RECIPE_CATS: { code: string; label: string }[] = [
@@ -41,6 +46,28 @@ export function RecipesPage() {
     queryFn: () => nookipedia.recipes(),
   })
   const data = query.data ?? []
+
+  // 상세 카드를 열 때만 결과물 아이템 데이터를 로드(아이템 페이지와 캐시 공유)
+  const itemQueries = useQueries({
+    queries: ITEM_CATS.map((c) => ({
+      queryKey: ['nook', c],
+      queryFn: () => nookipedia[c]() as Promise<DetailItem[]>,
+      enabled: !!detail,
+    })),
+  })
+  // 레시피 이름 → 제작 결과 아이템(이름 일치, 대소문자 무시)
+  const craftedItem = useMemo<DetailItem | null>(() => {
+    if (!detail) return null
+    const key = detail.name.toLowerCase().trim()
+    for (const qr of itemQueries) {
+      const hit = (qr.data as DetailItem[] | undefined)?.find(
+        (it) => it.name.toLowerCase().trim() === key,
+      )
+      if (hit) return hit
+    }
+    return null
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detail, itemQueries.map((qr) => qr.data).join(',')])
 
   // 입수처 목록
   const sources = useMemo(() => {
@@ -187,6 +214,7 @@ export function RecipesPage() {
 
       <RecipeDetailModal
         recipe={detail}
+        item={craftedItem}
         title={detail ? ko(detail.name) : undefined}
         onClose={() => setDetail(null)}
       />
