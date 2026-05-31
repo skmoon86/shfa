@@ -6,23 +6,23 @@ import { useKoNamesMulti } from '../hooks/useKoNames'
 import { useCanSave, ToggleButton } from '../components/Toggle'
 import { Spinner, ErrorState, EmptyState } from '../components/states'
 import { SearchBar } from '../components/SearchBar'
+import { CategoryTabs } from '../components/CategoryTabs'
 import { ItemDetailModal, type DetailItem } from '../components/ItemDetailModal'
 import { itemCategory, ui, tSource } from '../i18n/ko'
 import { fmtBells } from '../lib/format'
 
 type DataCat = 'furniture' | 'clothing' | 'interior' | 'tools' | 'items' | 'photos' | 'gyroids'
-type Cat = 'all' | DataCat
 const DATA_CATS: DataCat[] = ['furniture', 'clothing', 'interior', 'tools', 'items', 'photos', 'gyroids']
-const TABS: { code: Cat; label: string }[] = [
-  { code: 'all', label: ui.all },
-  ...DATA_CATS.map((c) => ({ code: c as Cat, label: itemCategory[c] })),
-]
+const TABS: { code: DataCat; label: string }[] = DATA_CATS.map((c) => ({
+  code: c,
+  label: itemCategory[c],
+}))
 const PAGE = 60
 
 type Row = DetailItem & { __cat: DataCat }
 
 export function ItemsPage() {
-  const [cat, setCat] = useState<Cat>('all')
+  const [selected, setSelected] = useState<Set<DataCat>>(new Set())
   const [q, setQ] = useState('')
   const [limit, setLimit] = useState(PAGE)
   const [filter, setFilter] = useState<'all' | 'owned' | 'wishlist'>('all')
@@ -45,8 +45,17 @@ export function ItemsPage() {
     return direct
   }
 
-  // 'all'이면 7개 모두, 아니면 선택 카테고리만 로드
-  const cats: DataCat[] = cat === 'all' ? DATA_CATS : [cat]
+  const toggleCat = (c: DataCat) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      next.has(c) ? next.delete(c) : next.add(c)
+      return next
+    })
+    setLimit(PAGE)
+  }
+
+  // 아무것도 선택 안 하면 7개 모두, 아니면 선택 카테고리만 로드
+  const cats: DataCat[] = selected.size === 0 ? DATA_CATS : DATA_CATS.filter((c) => selected.has(c))
   const queries = useQueries({
     queries: cats.map((c) => ({
       queryKey: ['nook', c],
@@ -66,7 +75,7 @@ export function ItemsPage() {
     })
     return out
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cat, queries.map((qr) => qr.data).join(',')])
+  }, [cats.join(','), queries.map((qr) => qr.data).join(',')])
 
   const filtered = useMemo(() => {
     let rows = data
@@ -99,25 +108,15 @@ export function ItemsPage() {
     <div>
       <h1 className="mb-1 text-2xl font-bold">아이템 컬렉션</h1>
 
-      <div className="no-scrollbar mb-4 -mx-4 flex gap-2 overflow-x-auto px-4">
-        {TABS.map((t) => (
-          <button
-            key={t.code}
-            onClick={() => {
-              setCat(t.code)
-              setLimit(PAGE)
-            }}
-            className={
-              'shrink-0 rounded-xl px-4 py-2 text-sm font-semibold transition ' +
-              (cat === t.code
-                ? 'bg-leaf-500 text-white'
-                : 'bg-leaf-100 text-leaf-600 hover:bg-leaf-200 dark:bg-leaf-700 dark:text-sand-50')
-            }
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <CategoryTabs
+        tabs={TABS}
+        selected={selected}
+        onToggle={toggleCat}
+        onClear={() => {
+          setSelected(new Set())
+          setLimit(PAGE)
+        }}
+      />
 
       <div className="card mb-4 flex flex-wrap items-center gap-3 p-4">
         <SearchBar value={q} onChange={setQ} />

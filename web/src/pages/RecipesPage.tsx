@@ -7,12 +7,12 @@ import { useCanSave, ToggleButton } from '../components/Toggle'
 import { Spinner, ErrorState, EmptyState } from '../components/states'
 import { SearchBar } from '../components/SearchBar'
 import { ProgressBar } from '../components/ProgressBar'
+import { CategoryTabs } from '../components/CategoryTabs'
 import { ui, tSource } from '../i18n/ko'
 import { fmtBells } from '../lib/format'
 
 // 레시피 대분류(가구/벽걸이·천장/벽지·바닥·러그/도구/설비/요리/잡화)
 const RECIPE_CATS: { code: string; label: string }[] = [
-  { code: '', label: '전체' },
   { code: 'furniture', label: '가구' },
   { code: 'wall', label: '벽걸이·천장' },
   { code: 'interior', label: '벽지·바닥·러그' },
@@ -25,7 +25,7 @@ const RECIPE_CATS: { code: string; label: string }[] = [
 export function RecipesPage() {
   const [q, setQ] = useState('')
   const [source, setSource] = useState<string>('')
-  const [rcat, setRcat] = useState<string>('')
+  const [rcats, setRcats] = useState<Set<string>>(new Set())
   const [onlyTodo, setOnlyTodo] = useState(false)
   const [sortBy, setSortBy] = useState<'default' | 'name'>('default')
   const canSave = useCanSave()
@@ -58,15 +58,22 @@ export function RecipesPage() {
     if (source) {
       rows = rows.filter((r) => (r.availability ?? []).some((a) => a.from === source))
     }
-    if (rcat) {
-      rows = rows.filter((r) => catOf(r.name) === rcat)
+    if (rcats.size) {
+      rows = rows.filter((r) => rcats.has(catOf(r.name)))
     }
     if (onlyTodo) rows = rows.filter((r) => !learned.has(r.name))
     if (sortBy === 'name') {
       rows = [...rows].sort((a, b) => ko(a.name).localeCompare(ko(b.name), 'ko'))
     }
     return rows
-  }, [data, q, source, rcat, onlyTodo, learned, ko, catOf, sortBy])
+  }, [data, q, source, rcats, onlyTodo, learned, ko, catOf, sortBy])
+
+  const toggleCat = (c: string) =>
+    setRcats((prev) => {
+      const next = new Set(prev)
+      next.has(c) ? next.delete(c) : next.add(c)
+      return next
+    })
 
   const learnedCount = data.filter((r) => learned.has(r.name)).length
 
@@ -74,23 +81,13 @@ export function RecipesPage() {
     <div>
       <h1 className="mb-1 text-2xl font-bold">DIY 레시피</h1>
 
-      {/* 카테고리 탭 */}
-      <div className="no-scrollbar mb-4 -mx-4 flex gap-2 overflow-x-auto px-4">
-        {RECIPE_CATS.map((c) => (
-          <button
-            key={c.code}
-            onClick={() => setRcat(c.code)}
-            className={
-              'shrink-0 rounded-xl px-4 py-2 text-sm font-semibold transition ' +
-              (rcat === c.code
-                ? 'bg-leaf-500 text-white'
-                : 'bg-leaf-100 text-leaf-600 hover:bg-leaf-200 dark:bg-leaf-700 dark:text-sand-50')
-            }
-          >
-            {c.label}
-          </button>
-        ))}
-      </div>
+      {/* 카테고리 탭 (다중선택) */}
+      <CategoryTabs
+        tabs={RECIPE_CATS}
+        selected={rcats}
+        onToggle={toggleCat}
+        onClear={() => setRcats(new Set())}
+      />
 
       <div className="card mb-4 space-y-3 p-4">
         <ProgressBar value={learnedCount} total={data.length} label="레시피 습득률" />

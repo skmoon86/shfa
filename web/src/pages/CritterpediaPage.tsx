@@ -7,17 +7,17 @@ import { useCanSave, ToggleButton } from '../components/Toggle'
 import { Spinner, ErrorState, EmptyState } from '../components/states'
 import { SearchBar } from '../components/SearchBar'
 import { ProgressBar } from '../components/ProgressBar'
+import { CategoryTabs } from '../components/CategoryTabs'
 import { critterCategory, ui } from '../i18n/ko'
 import { tr, fishLocation, bugLocation, fmtMonths, fmtTime } from '../i18n/terms'
 import { fmtBells } from '../lib/format'
 
 type DataCat = 'fish' | 'bugs' | 'sea' | 'fossils' | 'art'
-type Cat = 'all' | DataCat
 const DATA_CATS: DataCat[] = ['fish', 'bugs', 'sea', 'fossils', 'art']
-const TABS: { code: Cat; label: string }[] = [
-  { code: 'all', label: ui.all },
-  ...DATA_CATS.map((c) => ({ code: c as Cat, label: critterCategory[c] })),
-]
+const TABS: { code: DataCat; label: string }[] = DATA_CATS.map((c) => ({
+  code: c,
+  label: critterCategory[c],
+}))
 const CRITTER_CATS: DataCat[] = ['fish', 'bugs', 'sea']
 
 const currentMonth = new Date().getMonth() + 1
@@ -30,7 +30,7 @@ function availArray(c: Critter, hemi: 'north' | 'south'): number[] {
 }
 
 export function CritterpediaPage() {
-  const [cat, setCat] = useState<Cat>('all')
+  const [selected, setSelected] = useState<Set<DataCat>>(new Set())
   const [q, setQ] = useState('')
   const [hemi, setHemi] = useState<'north' | 'south'>('north')
   const [onlyNow, setOnlyNow] = useState(false)
@@ -66,7 +66,16 @@ export function CritterpediaPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queries.map((qr) => qr.data).join(',')])
 
-  const data = cat === 'all' ? allRows : allRows.filter((r) => r.__cat === cat)
+  const toggleCat = (c: DataCat) =>
+    setSelected((prev) => {
+      const next = new Set(prev)
+      next.has(c) ? next.delete(c) : next.add(c)
+      return next
+    })
+
+  const data = selected.size === 0 ? allRows : allRows.filter((r) => selected.has(r.__cat))
+  const catLabel =
+    selected.size === 0 ? '전체' : [...selected].map((c) => critterCategory[c]).join(', ')
 
   const filtered = useMemo(() => {
     let rows = data
@@ -96,30 +105,20 @@ export function CritterpediaPage() {
     <div>
       <h1 className="mb-1 text-2xl font-bold">{ui.appName} · 도감</h1>
 
-      {/* 카테고리 탭 */}
-      <div className="no-scrollbar mb-4 -mx-4 flex gap-2 overflow-x-auto px-4">
-        {TABS.map((t) => (
-          <button
-            key={t.code}
-            onClick={() => setCat(t.code)}
-            className={
-              'shrink-0 rounded-xl px-4 py-2 text-sm font-semibold transition ' +
-              (cat === t.code
-                ? 'bg-leaf-500 text-white'
-                : 'bg-leaf-100 text-leaf-600 hover:bg-leaf-200 dark:bg-leaf-700 dark:text-sand-50')
-            }
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* 카테고리 탭 (다중선택) */}
+      <CategoryTabs
+        tabs={TABS}
+        selected={selected}
+        onToggle={toggleCat}
+        onClear={() => setSelected(new Set())}
+      />
 
       {/* 진행률 + 컨트롤 */}
       <div className="card mb-4 space-y-3 p-4">
         <ProgressBar
           value={donatedCount}
           total={total}
-          label={`${cat === 'all' ? '전체' : critterCategory[cat]} 기증 진행률`}
+          label={`${catLabel} 기증 진행률`}
         />
         <div className="flex flex-wrap items-center gap-3">
           <SearchBar value={q} onChange={setQ} />

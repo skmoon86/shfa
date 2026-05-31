@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- 배경: 잎사귀 그린 그라데이션 -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6fbf3f"/>
+      <stop offset="1" stop-color="#4d9329"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- 흰 나뭇잎 (모여봐요 동물의 숲 잎 모티프) -->
+  <g transform="translate(256 256) rotate(-20)">
+    <path fill="#ffffff"
+      d="M0 -150
+         C 95 -150 150 -80 150 30
+         C 150 110 95 150 0 150
+         C -95 150 -150 110 -150 30
+         C -150 -80 -95 -150 0 -150 Z"/>
+    <!-- 잎맥 -->
+    <path stroke="#4d9329" stroke-width="14" stroke-linecap="round" fill="none"
+      d="M0 -120 L0 130"/>
+    <path stroke="#4d9329" stroke-width="11" stroke-linecap="round" fill="none"
+      d="M0 -55 C 55 -75 90 -60 110 -20
+         M0 5 C 55 -15 90 0 110 40
+         M0 65 C 50 50 80 62 95 95
+         M0 -55 C -55 -75 -90 -60 -110 -20
+         M0 5 C -55 -15 -90 0 -110 40
+         M0 65 C -50 50 -80 62 -95 95"/>
+  </g>
+</svg>
