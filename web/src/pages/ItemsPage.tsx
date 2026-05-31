@@ -41,7 +41,8 @@ export function ItemsPage() {
     })),
   })
   const isLoading = queries.some((qr) => qr.isLoading)
-  const error = queries.find((qr) => qr.error)?.error
+  const anyError = queries.some((qr) => qr.isError)
+  const allError = queries.length > 0 && queries.every((qr) => qr.isError)
 
   const data = useMemo<Row[]>(() => {
     const out: Row[] = []
@@ -123,10 +124,15 @@ export function ItemsPage() {
         </span>
       </div>
 
-      {isLoading ? (
+      {anyError && data.length > 0 && (
+        <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-2 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+          일부 카테고리를 일시적으로 불러오지 못했어요(Nookipedia 서버 상태). 잠시 후 새로고침해 보세요.
+        </div>
+      )}
+      {isLoading && data.length === 0 ? (
         <Spinner />
-      ) : error ? (
-        <ErrorState error={error} />
+      ) : allError && data.length === 0 ? (
+        <ErrorState error={new Error('Nookipedia 서버가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도하세요.')} />
       ) : shown.length === 0 ? (
         <EmptyState />
       ) : (

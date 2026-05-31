@@ -92,49 +92,71 @@ Deno.serve(async (req) => {
     .join('&')
   const cacheKey = `${segments.join('/')}${sortedQuery ? `?${sortedQuery}` : ''}`
 
-  // 1) 캐시 조회
+  // 1) 캐시 조회 (TTL 무관하게 읽어두고, 신선하면 즉시 반환·아니면 폴백용 보관)
+  let cachedRow: { data: unknown; fetched_at: string } | null = null
   if (admin) {
     const { data: cached } = await admin
       .from('nook_cache')
       .select('data, fetched_at')
       .eq('endpoint', cacheKey)
       .maybeSingle()
-    if (cached) {
-      const age = Date.now() - new Date(cached.fetched_at).getTime()
+    cachedRow = cached ?? null
+    if (cachedRow) {
+      const age = Date.now() - new Date(cachedRow.fetched_at).getTime()
       if (age < CACHE_TTL_MS) {
-        return json(cached.data, 200, { 'X-Cache': 'HIT' })
+        return json(cachedRow.data, 200, { 'X-Cache': 'HIT' })
       }
     }
   }
 
-  // 2) Nookipedia 호출
+  // 2) Nookipedia 호출 (5xx/네트워크 오류는 재시도, 대용량 대비 타임아웃 상향)
   const target = `${NOOKIPEDIA_BASE}/${segments.join('/')}${
     sortedQuery ? `?${sortedQuery}` : ''
   }`
-  let upstream: Response
-  try {
-    upstream = await fetch(target, {
-      headers: {
-        'X-API-KEY': apiKey,
-        'Accept-Version': ACCEPT_VERSION,
-        Accept: 'application/json',
-      },
-    })
-  } catch (e) {
-    return json({ error: 'Nookipedia 호출 실패', detail: String(e) }, 502)
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+  let payload: unknown = null
+  let lastStatus = 0
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const upstream = await fetch(target, {
+        headers: {
+          'X-API-KEY': apiKey,
+          'Accept-Version': ACCEPT_VERSION,
+          Accept: 'application/json',
+        },
+        signal: AbortSignal.timeout(20000),
+      })
+      if (upstream.ok) {
+        payload = await upstream.json()
+        break
+      }
+      lastStatus = upstream.status
+      // 4xx는 재시도 의미 없음(404 등) → 중단
+      if (upstream.status < 500) {
+        const text = await upstream.text()
+        return json(
+          { error: `Nookipedia ${upstream.status}`, detail: text.slice(0, 300) },
+          upstream.status,
+        )
+      }
+    } catch (_e) {
+      lastStatus = 599
+    }
+    if (attempt < 1) await sleep(800)
   }
 
-  if (!upstream.ok) {
-    const text = await upstream.text()
+  // 3) 실패 시: 만료된 캐시라도 있으면 그것을 반환(stale-on-error)
+  if (payload === null) {
+    if (cachedRow) {
+      return json(cachedRow.data, 200, { 'X-Cache': 'STALE' })
+    }
     return json(
-      { error: `Nookipedia ${upstream.status}`, detail: text.slice(0, 500) },
-      upstream.status,
+      { error: `Nookipedia 일시 오류(${lastStatus}). 잠시 후 다시 시도하세요.` },
+      503,
     )
   }
 
-  const payload = await upstream.json()
-
-  // 3) 캐시 저장(베스트에포트)
+  // 4) 캐시 저장(베스트에포트)
   if (admin) {
     await admin
       .from('nook_cache')
