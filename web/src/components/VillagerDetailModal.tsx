@@ -8,6 +8,17 @@ import {
 } from '../lib/nookipedia'
 import { recipesForPersonality } from '../data/villagerRecipes'
 import { ui, tPersonality } from '../i18n/ko'
+import {
+  tr,
+  trList,
+  species as speciesKo,
+  gender as genderKo,
+  sign as signKo,
+  month as monthKo,
+  hobby as hobbyKo,
+  style as styleKo,
+  color as colorKo,
+} from '../i18n/terms'
 import { useKoNames } from '../hooks/useKoNames'
 import { Sheet } from './Sheet'
 
@@ -81,11 +92,13 @@ export function VillagerDetailModal({
             <div>
               <h2 className="text-xl font-bold">{koName || villager.name}</h2>
               <div className="text-sm text-leaf-500">
-                {villager.species} · {tPersonality(villager.personality)} · {villager.gender}
+                {tr(speciesKo, villager.species)} · {tPersonality(villager.personality)} ·{' '}
+                {tr(genderKo, villager.gender)}
               </div>
               {(villager.birthday_month || villager.sign) && (
                 <div className="text-xs text-leaf-400">
-                  🎂 {villager.birthday_month} {villager.birthday_day} · {villager.sign}
+                  🎂 {tr(monthKo, villager.birthday_month)} {villager.birthday_day}일 ·{' '}
+                  {tr(signKo, villager.sign)}
                 </div>
               )}
             </div>
@@ -103,10 +116,10 @@ export function VillagerDetailModal({
 
         {/* 취향 */}
         <div className="mb-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-          <Info label="취미" value={d?.hobby} />
+          <Info label="취미" value={tr(hobbyKo, d?.hobby)} />
           <Info label="말버릇" value={d?.catchphrase} />
-          <Info label="호감 스타일" value={d?.fav_styles?.join(', ')} />
-          <Info label="호감 색상" value={d?.fav_colors?.join(', ')} />
+          <Info label="호감 스타일" value={trList(styleKo, d?.fav_styles)} />
+          <Info label="호감 색상" value={trList(colorKo, d?.fav_colors)} />
         </div>
 
         {/* 호감 선물 추정 */}

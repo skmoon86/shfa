@@ -8,6 +8,7 @@ import { Spinner, ErrorState, EmptyState } from '../components/states'
 import { SearchBar } from '../components/SearchBar'
 import { ProgressBar } from '../components/ProgressBar'
 import { critterCategory, ui } from '../i18n/ko'
+import { tr, fishLocation, bugLocation } from '../i18n/terms'
 import { fmtBells } from '../lib/format'
 
 type Cat = 'fish' | 'bugs' | 'sea' | 'fossils' | 'art'
@@ -153,7 +154,14 @@ export function CritterpediaPage() {
                 {/* 카테고리별 메타 */}
                 {isCritter && (
                   <div className="mt-1 space-y-0.5 text-xs text-leaf-500">
-                    {(r as Critter).location && <div>📍 {(r as Critter).location}</div>}
+                    {(r as Critter).location && (
+                      <div>
+                        📍{' '}
+                        {cat === 'bugs'
+                          ? tr(bugLocation, (r as Critter).location)
+                          : tr(fishLocation, (r as Critter).location)}
+                      </div>
+                    )}
                     <div>
                       💰 너굴: {fmtBells((r as Critter).sell_nook)}
                       {(r as Critter).sell_cj

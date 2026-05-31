@@ -8,6 +8,7 @@ import { Spinner, ErrorState, EmptyState } from '../components/states'
 import { SearchBar } from '../components/SearchBar'
 import { VillagerDetailModal } from '../components/VillagerDetailModal'
 import { tPersonality, personality as personalityKo, ui } from '../i18n/ko'
+import { tr, species as speciesKo } from '../i18n/terms'
 
 const PAGE = 60
 
@@ -66,7 +67,7 @@ export function VillagersPage() {
           <option value="">종: 전체</option>
           {speciesList.map((s) => (
             <option key={s} value={s}>
-              {s}
+              {tr(speciesKo, s)}
             </option>
           ))}
         </select>
@@ -123,7 +124,7 @@ export function VillagersPage() {
                     <div className="mt-1 text-sm font-semibold">{ko(v.name)}</div>
                   </button>
                   <div className="mt-0.5 text-xs text-leaf-400">
-                    {v.species} · {tPersonality(v.personality)}
+                    {tr(speciesKo, v.species)} · {tPersonality(v.personality)}
                   </div>
                 </div>
               )

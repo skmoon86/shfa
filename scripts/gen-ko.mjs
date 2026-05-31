@@ -59,6 +59,35 @@ async function main() {
     await writeFile(path, JSON.stringify(map))
     console.log(`${cat}: ${Object.keys(map).length} entries (${sheets.join(', ')})`)
   }
+
+  // ── 레시피 카테고리(레시피명 → 대분류 코드) ───────────────
+  const RECIPE_CAT = {
+    Housewares: 'furniture',
+    'Wall-mounted': 'wall',
+    'Ceiling Decor': 'wall',
+    Wallpaper: 'interior',
+    Floors: 'interior',
+    Rugs: 'interior',
+    Tools: 'tools',
+    Equipment: 'equipment',
+    Savory: 'food',
+    Sweet: 'food',
+    Miscellaneous: 'misc',
+    Other: 'misc',
+  }
+  const recipes = await fetchSheet('Recipes')
+  const rcat = {}
+  for (const r of recipes) {
+    const code = RECIPE_CAT[r.category]
+    if (!code) continue
+    for (const key of [r.name, r?.translations?.eUen, r?.translations?.uSen]) {
+      const k = norm(key)
+      if (k && !rcat[k]) rcat[k] = code
+    }
+  }
+  await writeFile(new URL('recipe-cats.json', outDir), JSON.stringify(rcat))
+  console.log(`recipe-cats: ${Object.keys(rcat).length} entries`)
+
   console.log('done.')
 }
 

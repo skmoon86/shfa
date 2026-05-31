@@ -145,15 +145,116 @@ export const sourceLabel: Record<string, string> = {
   Villagers: '주민',
   Villager: '주민',
   Balloons: '풍선',
+  // 상점 / NPC / 시설
+  'Able Sisters': '에이블 자매(의상실)',
+  'apparel shop': '옷가게',
+  Kicks: '슈슈(신발가게)',
+  "Nook's Cranny (upgraded)": '너굴 상점(확장)',
+  'Nook Shopping': '너굴 쇼핑',
+  NookLink: '너굴링크',
+  Timmy: '콩돌이',
+  Tommy: '밤돌이',
+  Saharah: '사하라',
+  "Saharah's Co-Op": '사하라 협동조합',
+  "Redd's Raffle": '갸르송 추첨',
+  Reese: '리사',
+  Label: '라벨',
+  Mabel: '마블',
+  "Kapp'n": '갈가펀',
+  'C.J.': '저스틴',
+  Flick: '레온',
+  Wilbur: '로드리',
+  Gullivarrr: '해적 죠니',
+  Franklin: '프랭클린(추수감사절)',
+  Rover: '미파',
+  Luna: '루나(꿈섬)',
+  Lloid: '로이드',
+  Resetti: '다람이',
+  Joan: '무파니 할머니',
+  Wardell: '와델',
+  Lottie: '로티',
+  Cornimer: '코니마',
+  // 시설 / 장소
+  'Bank of Nook': '너굴 은행',
+  'Dodo Airlines': '도도 항공',
+  'Paradise Planning office': '파라다이스 플래닝',
+  'hotel souvenir shop': '호텔 기념품점',
+  School: '학교',
+  hospital: '병원',
+  'Boat tour': '보트 투어',
+  'Slumber Island': '꿈섬',
+  Archipelago: '외딴섬 투어',
+  // 메커니즘
+  crafting: '제작',
+  cooking: '요리',
+  catching: '채집',
+  diving: '잠수',
+  'dig spot': '땅 파기',
+  Ground: '땅',
+  beach: '해변',
+  tree: '나무',
+  balloon: '풍선',
+  turnips: '무(순무)',
+  'recycle box': '재활용 상자',
+  'Lost item': '분실물',
+  'Quest item': '퀘스트 보상',
+  Unobtainable: '입수 불가',
+  Birthday: '생일',
+  'May Day': '메이데이',
+  'Toy Day stockings': '토이데이 양말',
+  communicator: '통신기',
+  'communicator part': '통신기 부품',
+  friendship: '주민 친밀도',
+  'fountain firework': '불꽃놀이',
+  'festive wrapping paper': '크리스마스 포장지',
+  'lucky red envelope': '세뱃돈 봉투',
+  'otoshidama envelope': '세뱃돈 봉투',
+  'bokjumeoni lucky pouch': '복주머니',
+}
+
+// 패턴 기반 변환(꽃/나무/작물 등 규칙적 항목)
+const COLOR_TOKEN: Record<string, string> = {
+  red: '빨강', blue: '파랑', white: '하양', yellow: '노랑', purple: '보라',
+  orange: '주황', pink: '분홍', black: '검정', green: '초록', gold: '황금',
+}
+const FLOWER_TOKEN: Record<string, string> = {
+  rose: '장미', tulip: '튤립', pansy: '팬지', lily: '백합', hyacinth: '히아신스',
+  windflower: '아네모네', cosmos: '코스모스', mum: '국화',
+}
+const TREE_TOKEN: Record<string, string> = {
+  apple: '사과', orange: '오렌지', peach: '복숭아', pear: '배', cherry: '체리',
+  coconut: '코코넛', cedar: '삼나무', bamboo: '대나무',
+}
+const CROP_TOKEN: Record<string, string> = {
+  tomato: '토마토', potato: '감자', carrot: '당근', wheat: '밀',
+  sugarcane: '사탕수수', pumpkin: '호박',
+}
+
+function patternSource(from: string): string | null {
+  // "<color>-<flower> plant" → "빨강 장미(재배)"
+  let m = /^([a-z]+)-([a-z]+) plant$/.exec(from)
+  if (m && COLOR_TOKEN[m[1]] && FLOWER_TOKEN[m[2]])
+    return `${COLOR_TOKEN[m[1]]} ${FLOWER_TOKEN[m[2]]}(재배)`
+  // "<fruit> tree" → "사과나무"
+  m = /^([a-z]+) tree$/.exec(from)
+  if (m && TREE_TOKEN[m[1]]) return `${TREE_TOKEN[m[1]]}나무`
+  // 호박 색상: "green pumpkin" 등
+  m = /^([a-z]+) pumpkin$/.exec(from)
+  if (m && COLOR_TOKEN[m[1]]) return `${COLOR_TOKEN[m[1]]} 호박`
+  // "ripe <x> plant", "<x> start", "seed <x>", "<x>" 작물
+  m = /^(?:ripe )?([a-z]+)(?:-pumpkin)?(?: plant| start)?$/.exec(from)
+  if (m && CROP_TOKEN[m[1]]) return `${CROP_TOKEN[m[1]]}(재배)`
+  return null
 }
 
 export function tSource(from: string): string {
   if (!from) return ''
-  // 정확 매칭 → 소문자 매칭 순으로 시도, 없으면 원문 유지
   if (sourceLabel[from]) return sourceLabel[from]
   const lower = from.toLowerCase()
   const hit = Object.keys(sourceLabel).find((k) => k.toLowerCase() === lower)
-  return hit ? sourceLabel[hit] : from
+  if (hit) return sourceLabel[hit]
+  const pat = patternSource(lower)
+  return pat ?? from
 }
 export function tPersonality(p?: string): string {
   if (!p) return ''

@@ -1,5 +1,6 @@
 import type { Furniture, Variation, PriceEntry, Availability } from '../lib/nookipedia'
 import { ui, tSource } from '../i18n/ko'
+import { tr, trList, itemCategoryName, style as styleKo, theme as themeKo } from '../i18n/terms'
 import { fmtBells, fmtBuy } from '../lib/format'
 import { Sheet } from './Sheet'
 
@@ -50,7 +51,9 @@ export function ItemDetailModal({
             <div>
               <h2 className="text-lg font-bold">{title || item.name}</h2>
               {item.category && (
-                <span className="text-xs text-leaf-400">{item.category}</span>
+                <span className="text-xs text-leaf-400">
+                  {tr(itemCategoryName, item.category)}
+                </span>
               )}
             </div>
           </div>
@@ -149,10 +152,10 @@ export function ItemDetailModal({
         {/* 메타 */}
         <div className="space-y-1 text-sm text-leaf-500">
           {item.themes && item.themes.length > 0 && (
-            <div>테마: {item.themes.join(', ')}</div>
+            <div>테마: {trList(themeKo, item.themes)}</div>
           )}
           {item.styles && item.styles.length > 0 && (
-            <div>스타일: {item.styles.join(', ')}</div>
+            <div>스타일: {trList(styleKo, item.styles)}</div>
           )}
           {f.item_series && <div>시리즈: {f.item_series}</div>}
           {f.function && <div>기능: {f.function}</div>}
