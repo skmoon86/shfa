@@ -79,27 +79,81 @@ export const personality: Record<string, string> = {
 // 월 라벨
 export const monthLabel = (m: number) => `${m}월`
 
-// 입수처 한국어(레시피 availability.from 등)
+// 입수처 한국어(레시피 availability.from 등). 키는 Nookipedia 원문과 정확히 일치.
 export const sourceLabel: Record<string, string> = {
+  // 상점 / 마일 / 제작
+  "Nook's Cranny": '너굴 상점',
+  'Nook Stop': '너굴 포트(마일 교환)',
+  'Nook Miles': '너굴 마일',
+  Nintendo: '닌텐도 배포',
+  Crafting: '제작',
+  // 채집 / 자연
+  balloons: '풍선',
+  'egg balloon': '알 풍선',
+  'message bottle': '유리병 편지',
+  'egg bottle': '알 유리병',
+  fishing: '낚시',
+  rock: '바위(두드리기)',
+  axe: '도끼(나무)',
+  underground: '땅속(발굴)',
+  restaurant: '레스토랑(파니)',
+  // NPC
+  'Tom Nook': '너굴',
+  Isabelle: '여울',
+  Blathers: '부엉',
+  Celeste: '부옥',
+  Brewster: '마스터',
+  Cyrus: '리포',
+  'Daisy Mae': '무파니',
+  Gulliver: '죠니',
+  Harvey: '빠삐용',
+  Leif: '잎새',
+  Pascal: '라코스케',
+  Jingle: '룰루',
+  Zipper: '토독',
+  'Pavé': '파베',
+  Jack: '펌킹',
+  Niko: '니코',
+  Daisy: '무파니',
+  Mom: '엄마',
+  // 이벤트
+  'Bunny Day': '부활절',
+  'Turkey Day Recipes': '추수감사절 레시피',
+  'Cozy Turkey Day DIY': '포근한 추수감사절 DIY',
+  'Farway Museum': '박물관 이벤트',
+  'Faraway Museum': '박물관 이벤트',
+  Snowboy: '눈사람',
+  Seasonal: '시즌 이벤트',
+  // 레시피 모음(요리/도구 등)
+  'Basic Cooking Recipes': '기본 요리 레시피',
+  'Be a Chef! DIY Recipes+': '요리사가 되자! DIY 레시피+',
+  'DIY for Beginners': '초보자용 DIY',
+  'Pretty Good Tools Recipes': '쓸만한 도구 레시피',
+  'Test Your DIY Skills': 'DIY 실력 테스트',
+  'Custom Fencing in a Flash': '울타리 DIY 레시피',
+  'Wildest Dreams DIY': '꿈꾸던 DIY',
+  // 주민(성격별)
+  'any villager': '아무 주민',
+  'normal villager': '친절(보통) 주민',
+  'peppy villager': '명랑 주민',
+  'snooty villager': '성숙(거만) 주민',
+  'cranky villager': '무뚝뚝 주민',
+  'lazy villager': '먹보 주민',
+  'jock villager': '운동광 주민',
+  'smug villager': '느끼 주민',
+  'big sister villager': '단순(누나) 주민',
   Villagers: '주민',
   Villager: '주민',
   Balloons: '풍선',
-  Balloon: '풍선',
-  'Message bottles': '유리병 편지',
-  'Message in a bottle': '유리병 편지',
-  "Nook's Cranny": '너굴 상점',
-  'Nook Stop': '너굴 포트(마일)',
-  'Nook Miles': '너굴 마일',
-  Crafting: '제작',
-  'Tom Nook': '너굴',
-  Isabelle: '여울',
-  Mom: '엄마',
-  'Gulliver': '죠니',
-  'Seasonal': '시즌 이벤트',
 }
 
 export function tSource(from: string): string {
-  return sourceLabel[from] ?? from
+  if (!from) return ''
+  // 정확 매칭 → 소문자 매칭 순으로 시도, 없으면 원문 유지
+  if (sourceLabel[from]) return sourceLabel[from]
+  const lower = from.toLowerCase()
+  const hit = Object.keys(sourceLabel).find((k) => k.toLowerCase() === lower)
+  return hit ? sourceLabel[hit] : from
 }
 export function tPersonality(p?: string): string {
   if (!p) return ''
