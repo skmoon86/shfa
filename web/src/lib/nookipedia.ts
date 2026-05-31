@@ -12,11 +12,9 @@ export interface Availability {
   from: string
   note?: string
 }
-export interface Hemisphere {
-  months: string // 예: "3-6; 9-11"
-  months_array: number[]
-  availability_array: { months: string; time: string }[]
-  times_by_month?: Record<string, string>
+export interface CritterAvailability {
+  months: string // 예: "All year", "March – June"
+  time: string // 예: "All day", "4 AM – 9 PM"
 }
 
 // ── 도감: 물고기/곤충/해산물 ──────────────────────────────
@@ -37,9 +35,17 @@ export interface Critter {
   sell_flick?: number // 곤충 플릭
   tank_width?: number
   tank_length?: number
+  time?: string
   catchphrases?: string[]
-  north: Hemisphere
-  south: Hemisphere
+  // 출현 시기/시간 (북/남반구)
+  n_availability?: string
+  s_availability?: string
+  availability_north?: CritterAvailability[]
+  availability_south?: CritterAvailability[]
+  n_availability_array?: string[] // 출현 월 번호
+  s_availability_array?: string[]
+  times_by_month_north?: Record<string, string>
+  times_by_month_south?: Record<string, string>
 }
 
 // ── 도감: 화석 ────────────────────────────────────────────

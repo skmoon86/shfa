@@ -1,6 +1,13 @@
 import type { Furniture, Variation, PriceEntry, Availability } from '../lib/nookipedia'
 import { ui, tSource } from '../i18n/ko'
-import { tr, trList, itemCategoryName, style as styleKo, theme as themeKo } from '../i18n/terms'
+import {
+  tr,
+  trList,
+  itemCategoryName,
+  style as styleKo,
+  theme as themeKo,
+  color as colorKo,
+} from '../i18n/terms'
 import { fmtBells, fmtBuy } from '../lib/format'
 import { Sheet } from './Sheet'
 
@@ -135,13 +142,13 @@ export function ItemDetailModal({
                     className="mx-auto h-16 object-contain"
                   />
                   <div className="mt-1 truncate text-[11px]" title={v.variation}>
-                    {v.variation || '기본'}
+                    {tr(colorKo, v.variation) || '기본'}
                   </div>
                   {v.pattern && (
                     <div className="truncate text-[10px] text-leaf-400">{v.pattern}</div>
                   )}
                   {v.colors && v.colors.length > 0 && (
-                    <div className="text-[10px] text-leaf-400">{v.colors.join(', ')}</div>
+                    <div className="text-[10px] text-leaf-400">{trList(colorKo, v.colors)}</div>
                   )}
                 </div>
               ))}

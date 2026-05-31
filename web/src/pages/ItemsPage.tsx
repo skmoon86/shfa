@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQueries } from '@tanstack/react-query'
 import { nookipedia } from '../lib/nookipedia'
 import { useItemCollection } from '../hooks/useProgress'
-import { useKoNames } from '../hooks/useKoNames'
+import { useKoNamesMulti } from '../hooks/useKoNames'
 import { useCanSave, ToggleButton } from '../components/Toggle'
 import { Spinner, ErrorState, EmptyState } from '../components/states'
 import { SearchBar } from '../components/SearchBar'
@@ -10,72 +10,91 @@ import { ItemDetailModal, type DetailItem } from '../components/ItemDetailModal'
 import { itemCategory, ui, tSource } from '../i18n/ko'
 import { fmtBells } from '../lib/format'
 
-type Cat = 'furniture' | 'clothing' | 'interior' | 'tools' | 'items' | 'photos' | 'gyroids'
-const CATS: Cat[] = ['furniture', 'clothing', 'interior', 'tools', 'items', 'photos', 'gyroids']
+type DataCat = 'furniture' | 'clothing' | 'interior' | 'tools' | 'items' | 'photos' | 'gyroids'
+type Cat = 'all' | DataCat
+const DATA_CATS: DataCat[] = ['furniture', 'clothing', 'interior', 'tools', 'items', 'photos', 'gyroids']
+const TABS: { code: Cat; label: string }[] = [
+  { code: 'all', label: ui.all },
+  ...DATA_CATS.map((c) => ({ code: c as Cat, label: itemCategory[c] })),
+]
 const PAGE = 60
 
+type Row = DetailItem & { __cat: DataCat }
+
 export function ItemsPage() {
-  const [cat, setCat] = useState<Cat>('furniture')
+  const [cat, setCat] = useState<Cat>('all')
   const [q, setQ] = useState('')
   const [limit, setLimit] = useState(PAGE)
   const [filter, setFilter] = useState<'all' | 'owned' | 'wishlist'>('all')
   const [reformOnly, setReformOnly] = useState(false)
-  const [detail, setDetail] = useState<DetailItem | null>(null)
+  const [detail, setDetail] = useState<Row | null>(null)
   const canSave = useCanSave()
   const { map, toggle } = useItemCollection()
-  const ko = useKoNames(cat)
+  const ko = useKoNamesMulti(DATA_CATS)
 
-  const query = useQuery({
-    queryKey: ['nook', cat],
-    queryFn: () => nookipedia[cat](),
+  // 'all'이면 7개 모두, 아니면 선택 카테고리만 로드
+  const cats: DataCat[] = cat === 'all' ? DATA_CATS : [cat]
+  const queries = useQueries({
+    queries: cats.map((c) => ({
+      queryKey: ['nook', c],
+      queryFn: () => nookipedia[c]() as Promise<DetailItem[]>,
+    })),
   })
-  const data = (query.data ?? []) as DetailItem[]
+  const isLoading = queries.some((qr) => qr.isLoading)
+  const error = queries.find((qr) => qr.error)?.error
+
+  const data = useMemo<Row[]>(() => {
+    const out: Row[] = []
+    cats.forEach((c, i) => {
+      for (const r of (queries[i].data ?? []) as DetailItem[]) {
+        out.push(Object.assign({ __cat: c }, r) as Row)
+      }
+    })
+    return out
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cat, queries.map((qr) => qr.data).join(',')])
 
   const filtered = useMemo(() => {
     let rows = data
     if (q.trim()) {
       const l = q.toLowerCase()
       rows = rows.filter(
-        (r) => r.name.toLowerCase().includes(l) || ko(r.name).toLowerCase().includes(l),
+        (r) => r.name.toLowerCase().includes(l) || ko(r.name, r.__cat).toLowerCase().includes(l),
       )
     }
     if (reformOnly) rows = rows.filter((r) => r.customizable)
-    if (filter !== 'all') {
-      rows = rows.filter((r) => map[r.name]?.[filter])
-    }
+    if (filter !== 'all') rows = rows.filter((r) => map[r.name]?.[filter])
     return rows
   }, [data, q, reformOnly, filter, map, ko])
 
-  // 획득방법 요약 + 카탈로그 등록 가능 여부(획득처로 유추)
-  const acq = (r: DetailItem) =>
-    (r.availability ?? []).map((a) => tSource(a.from)).join(', ')
+  const shown = filtered.slice(0, limit)
+  const ownedCount = data.filter((r) => map[r.name]?.owned).length
+
+  const acq = (r: DetailItem) => (r.availability ?? []).map((a) => tSource(a.from)).join(', ')
   const inCatalog = (r: DetailItem) =>
     (r.availability ?? []).some((a) => /Nook|catalog|Shopping/i.test(a.from)) ||
     (r.buy ?? []).some((b) => b.price > 0)
-
-  const shown = filtered.slice(0, limit)
-  const ownedCount = data.filter((r) => map[r.name]?.owned).length
 
   return (
     <div>
       <h1 className="mb-1 text-2xl font-bold">아이템 컬렉션</h1>
 
       <div className="no-scrollbar mb-4 -mx-4 flex gap-2 overflow-x-auto px-4">
-        {CATS.map((c) => (
+        {TABS.map((t) => (
           <button
-            key={c}
+            key={t.code}
             onClick={() => {
-              setCat(c)
+              setCat(t.code)
               setLimit(PAGE)
             }}
             className={
               'shrink-0 rounded-xl px-4 py-2 text-sm font-semibold transition ' +
-              (cat === c
+              (cat === t.code
                 ? 'bg-leaf-500 text-white'
                 : 'bg-leaf-100 text-leaf-600 hover:bg-leaf-200 dark:bg-leaf-700 dark:text-sand-50')
             }
           >
-            {itemCategory[c]}
+            {t.label}
           </button>
         ))}
       </div>
@@ -91,25 +110,23 @@ export function ItemsPage() {
           <option value="owned">{ui.owned}</option>
           <option value="wishlist">{ui.wishlist}</option>
         </select>
-        {cat === 'furniture' && (
-          <label className="flex items-center gap-1.5 text-sm">
-            <input
-              type="checkbox"
-              checked={reformOnly}
-              onChange={(e) => setReformOnly(e.target.checked)}
-            />
-            {ui.reformable}만
-          </label>
-        )}
+        <label className="flex items-center gap-1.5 text-sm">
+          <input
+            type="checkbox"
+            checked={reformOnly}
+            onChange={(e) => setReformOnly(e.target.checked)}
+          />
+          {ui.reformable}만
+        </label>
         <span className="ml-auto text-xs text-leaf-400">
           {ui.owned} {ownedCount} / 전체 {data.length}
         </span>
       </div>
 
-      {query.isLoading ? (
+      {isLoading ? (
         <Spinner />
-      ) : query.error ? (
-        <ErrorState error={query.error} />
+      ) : error ? (
+        <ErrorState error={error} />
       ) : shown.length === 0 ? (
         <EmptyState />
       ) : (
@@ -118,11 +135,8 @@ export function ItemsPage() {
             {shown.map((r) => {
               const st = map[r.name] ?? { owned: false, wishlist: false }
               return (
-                <div key={r.name} className="card flex flex-col p-3">
-                  <button
-                    onClick={() => setDetail(r)}
-                    className="flex h-24 items-center justify-center"
-                  >
+                <div key={`${r.__cat}:${r.name}`} className="card flex flex-col p-3">
+                  <button onClick={() => setDetail(r)} className="flex h-24 items-center justify-center">
                     <img
                       src={r.image_url || r.variations?.[0]?.image_url}
                       alt={r.name}
@@ -134,7 +148,7 @@ export function ItemsPage() {
                     onClick={() => setDetail(r)}
                     className="mt-2 text-left text-sm font-semibold hover:text-leaf-500"
                   >
-                    {ko(r.name)}
+                    {ko(r.name, r.__cat)}
                   </button>
                   <div className="mt-1 text-xs text-leaf-500">
                     💰 {fmtBells(r.sell)} 벨
@@ -157,17 +171,13 @@ export function ItemsPage() {
                       label={ui.owned}
                       active={st.owned}
                       disabled={!canSave}
-                      onClick={() =>
-                        toggle.mutate({ itemId: r.name, category: cat, field: 'owned' })
-                      }
+                      onClick={() => toggle.mutate({ itemId: r.name, category: r.__cat, field: 'owned' })}
                     />
                     <ToggleButton
                       label={ui.wishlist}
                       active={st.wishlist}
                       disabled={!canSave}
-                      onClick={() =>
-                        toggle.mutate({ itemId: r.name, category: cat, field: 'wishlist' })
-                      }
+                      onClick={() => toggle.mutate({ itemId: r.name, category: r.__cat, field: 'wishlist' })}
                     />
                   </div>
                 </div>
@@ -186,7 +196,7 @@ export function ItemsPage() {
 
       <ItemDetailModal
         item={detail}
-        title={detail ? ko(detail.name) : undefined}
+        title={detail ? ko(detail.name, detail.__cat) : undefined}
         onClose={() => setDetail(null)}
       />
     </div>

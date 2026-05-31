@@ -75,7 +75,10 @@ export function VillagerDetailModal({
     const names = recipesForPersonality(villager.personality)
     const byName = new Map<string, Recipe>()
     for (const r of recipesQ.data ?? []) byName.set(r.name.toLowerCase(), r)
-    return names.map((n) => ({ name: n, recipe: byName.get(n.toLowerCase()) }))
+    // 실제 존재하는 레시피만(한글명으로 표시 가능) 남긴다
+    return names
+      .map((n) => byName.get(n.toLowerCase()))
+      .filter((r): r is Recipe => !!r)
   }, [villager, recipesQ.data])
 
   if (!villager) return null
@@ -108,16 +111,9 @@ export function VillagerDetailModal({
           </button>
         </div>
 
-        {villager.quote && (
-          <p className="mb-4 rounded-xl bg-leaf-50 p-3 text-sm italic dark:bg-leaf-700">
-            “{villager.quote}”
-          </p>
-        )}
-
-        {/* 취향 */}
-        <div className="mb-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+        {/* 취향 (대사·말버릇은 한국어 데이터가 없어 표시하지 않음) */}
+        <div className="mb-4 grid grid-cols-3 gap-3 text-sm">
           <Info label="취미" value={tr(hobbyKo, d?.hobby)} />
-          <Info label="말버릇" value={d?.catchphrase} />
           <Info label="호감 스타일" value={trList(styleKo, d?.fav_styles)} />
           <Info label="호감 색상" value={trList(colorKo, d?.fav_colors)} />
         </div>
@@ -162,19 +158,23 @@ export function VillagerDetailModal({
           <p className="mb-2 text-xs text-leaf-400">
             성격별 레시피 풀(대표 예시). 집에서 제작 중인 주민에게서 받을 수 있어요.
           </p>
-          <div className="flex flex-wrap gap-2">
-            {personalityRecipes.map(({ name, recipe }) => (
-              <div
-                key={name}
-                className="flex items-center gap-1.5 rounded-xl border border-leaf-100 px-2 py-1 dark:border-leaf-700"
-              >
-                {recipe?.image_url && (
-                  <img src={recipe.image_url} alt="" className="h-8 w-8 object-contain" />
-                )}
-                <span className="text-xs">{koRecipe(recipe?.name ?? name)}</span>
-              </div>
-            ))}
-          </div>
+          {personalityRecipes.length === 0 ? (
+            <p className="text-xs text-leaf-400">표시할 레시피 정보가 없어요.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {personalityRecipes.map((recipe) => (
+                <div
+                  key={recipe.name}
+                  className="flex items-center gap-1.5 rounded-xl border border-leaf-100 px-2 py-1 dark:border-leaf-700"
+                >
+                  {recipe.image_url && (
+                    <img src={recipe.image_url} alt="" className="h-8 w-8 object-contain" />
+                  )}
+                  <span className="text-xs">{koRecipe(recipe.name)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
     </Sheet>
   )

@@ -111,6 +111,33 @@ export const theme: Record<string, string> = {
   Stylish: '스타일리시', Supermarket: '슈퍼마켓', Workshop: '작업실',
 }
 
+// 출현 월 문자열 한글화: "All year"→연중, "March – June"→"3월–6월"
+const MONTH_FULL: Record<string, string> = {
+  January: '1월', February: '2월', March: '3월', April: '4월', May: '5월',
+  June: '6월', July: '7월', August: '8월', September: '9월', October: '10월',
+  November: '11월', December: '12월',
+}
+export function fmtMonths(s?: string): string {
+  if (!s) return ''
+  if (/all year/i.test(s)) return '연중'
+  let out = s
+  for (const [en, ko] of Object.entries(MONTH_FULL)) {
+    out = out.replace(new RegExp(en, 'g'), ko)
+  }
+  return out.replace(/\s*[–-]\s*/g, '–')
+}
+
+// 시간대 한글화: "All day"→하루 종일, "4 AM – 9 PM"→"오전 4시–오후 9시"
+export function fmtTime(s?: string): string {
+  if (!s) return ''
+  if (/all day/i.test(s)) return '하루 종일'
+  return s
+    .replace(/(\d+)\s*AM/g, '오전 $1시')
+    .replace(/(\d+)\s*PM/g, '오후 $1시')
+    .replace(/\s*[–-]\s*/g, '–')
+    .replace(/;/g, ', ')
+}
+
 // 범용 변환기: 사전에 없으면 원문 유지
 export function tr(map: Record<string, string>, v?: string): string {
   if (!v) return ''

@@ -37,27 +37,59 @@ async function fetchSheet(name) {
   return res.json()
 }
 
+// 깨진 번역값(변형 라벨이 이름 자리에 들어온 경우 등) 거르기
+const BAD = new Set(['종류 없음', 'No Variations', ''])
+const validKo = (r) => {
+  const ko = r?.translations?.kRko
+  if (!ko || BAD.has(ko)) return null
+  // 영문 번역이 실제 이름과 다른 변형 라벨이면(예: "No Variations") 신뢰 불가
+  const en = r?.translations?.eUen
+  if (en && /^no variations$/i.test(en)) return null
+  return ko
+}
+
 async function main() {
   const outDir = new URL('../web/public/ko/', import.meta.url)
   await mkdir(outDir, { recursive: true })
 
+  // 전체 아이템 이름 → 한글 (레시피명 = 아이템명이므로 신뢰 가능한 소스)
+  const allNames = {}
+
   for (const [cat, sheets] of Object.entries(MAP)) {
+    if (cat === 'recipes') continue // 레시피는 아래에서 특별 처리
     const map = {}
     for (const sheet of sheets) {
       const rows = await fetchSheet(sheet)
       for (const r of rows) {
-        const ko = r?.translations?.kRko
+        const ko = validKo(r)
         if (!ko) continue
-        // 매칭 키: name, 영문 번역(eUen/uSen) 모두 등록
         for (const key of [r.name, r?.translations?.eUen, r?.translations?.uSen]) {
           const k = norm(key)
           if (k && !map[k]) map[k] = ko
+          if (k && !allNames[k]) allNames[k] = ko
         }
       }
     }
     const path = new URL(`${cat}.json`, outDir)
     await writeFile(path, JSON.stringify(map))
     console.log(`${cat}: ${Object.keys(map).length} entries (${sheets.join(', ')})`)
+  }
+
+  // 레시피 이름: Recipes 시트의 번역이 정상일 때만 쓰고, 아니면 아이템명 사전으로 대체
+  {
+    const rows = await fetchSheet('Recipes')
+    const map = {}
+    for (const r of rows) {
+      const k = norm(r.name)
+      if (!k) continue
+      // Recipes 시트 번역이 이름과 일치할 때만 신뢰
+      const en = norm(r?.translations?.eUen)
+      const trusted = en === k ? validKo(r) : null
+      const ko = trusted || allNames[k]
+      if (ko && !BAD.has(ko)) map[k] = ko
+    }
+    await writeFile(new URL('recipes.json', outDir), JSON.stringify(map))
+    console.log(`recipes: ${Object.keys(map).length} entries (Recipes + 아이템명 보정)`)
   }
 
   // ── 레시피 카테고리(레시피명 → 대분류 코드) ───────────────

@@ -1,48 +1,71 @@
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQueries } from '@tanstack/react-query'
 import { nookipedia, type Critter, type Fossil, type Art } from '../lib/nookipedia'
 import { useCritterpedia } from '../hooks/useProgress'
-import { useKoNames } from '../hooks/useKoNames'
+import { useKoNamesMulti } from '../hooks/useKoNames'
 import { useCanSave, ToggleButton } from '../components/Toggle'
 import { Spinner, ErrorState, EmptyState } from '../components/states'
 import { SearchBar } from '../components/SearchBar'
 import { ProgressBar } from '../components/ProgressBar'
 import { critterCategory, ui } from '../i18n/ko'
-import { tr, fishLocation, bugLocation } from '../i18n/terms'
+import { tr, fishLocation, bugLocation, fmtMonths, fmtTime } from '../i18n/terms'
 import { fmtBells } from '../lib/format'
 
-type Cat = 'fish' | 'bugs' | 'sea' | 'fossils' | 'art'
-const CATS: Cat[] = ['fish', 'bugs', 'sea', 'fossils', 'art']
-const CRITTER_CATS: Cat[] = ['fish', 'bugs', 'sea']
+type DataCat = 'fish' | 'bugs' | 'sea' | 'fossils' | 'art'
+type Cat = 'all' | DataCat
+const DATA_CATS: DataCat[] = ['fish', 'bugs', 'sea', 'fossils', 'art']
+const TABS: { code: Cat; label: string }[] = [
+  { code: 'all', label: ui.all },
+  ...DATA_CATS.map((c) => ({ code: c as Cat, label: critterCategory[c] })),
+]
+const CRITTER_CATS: DataCat[] = ['fish', 'bugs', 'sea']
 
 const currentMonth = new Date().getMonth() + 1
 
-function isAvailableNow(c: Critter, hemi: 'north' | 'south'): boolean {
-  const arr = c[hemi]?.months_array ?? []
-  return arr.includes(currentMonth)
+type Row = (Critter | Fossil | Art) & { __cat: DataCat }
+
+function availArray(c: Critter, hemi: 'north' | 'south'): number[] {
+  const arr = (hemi === 'north' ? c.n_availability_array : c.s_availability_array) ?? []
+  return arr.map(Number)
 }
 
 export function CritterpediaPage() {
-  const [cat, setCat] = useState<Cat>('fish')
+  const [cat, setCat] = useState<Cat>('all')
   const [q, setQ] = useState('')
   const [hemi, setHemi] = useState<'north' | 'south'>('north')
   const [onlyNow, setOnlyNow] = useState(false)
   const canSave = useCanSave()
   const { map, toggle } = useCritterpedia()
-  const ko = useKoNames(cat)
+  const ko = useKoNamesMulti(DATA_CATS)
 
-  const query = useQuery({
-    queryKey: ['nook', cat],
-    queryFn: (): Promise<(Critter | Fossil | Art)[]> => {
-      if (cat === 'fossils') return nookipedia.fossils()
-      if (cat === 'art') return nookipedia.art()
-      return nookipedia[cat]()
-    },
+  // 5개 카테고리를 모두 불러와(작은 데이터셋) 탭 전환을 즉시 처리
+  const queries = useQueries({
+    queries: DATA_CATS.map((c) => ({
+      queryKey: ['nook', c],
+      queryFn: (): Promise<(Critter | Fossil | Art)[]> =>
+        c === 'fossils'
+          ? nookipedia.fossils()
+          : c === 'art'
+            ? nookipedia.art()
+            : nookipedia[c](),
+    })),
   })
+  const isLoading = queries.some((qr) => qr.isLoading)
+  const error = queries.find((qr) => qr.error)?.error
 
-  const isCritter = CRITTER_CATS.includes(cat)
+  // __cat 태그 부여 후 병합
+  const allRows = useMemo<Row[]>(() => {
+    const out: Row[] = []
+    DATA_CATS.forEach((c, i) => {
+      for (const r of (queries[i].data ?? []) as (Critter | Fossil | Art)[]) {
+        out.push(Object.assign({ __cat: c }, r) as Row)
+      }
+    })
+    return out
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queries.map((qr) => qr.data).join(',')])
 
-  const data = (query.data ?? []) as (Critter | Fossil | Art)[]
+  const data = cat === 'all' ? allRows : allRows.filter((r) => r.__cat === cat)
 
   const filtered = useMemo(() => {
     let rows = data
@@ -51,20 +74,22 @@ export function CritterpediaPage() {
       rows = rows.filter(
         (r) =>
           r.name.toLowerCase().includes(lower) ||
-          ko(r.name).toLowerCase().includes(lower),
+          ko(r.name, r.__cat).toLowerCase().includes(lower),
       )
     }
-    if (isCritter && onlyNow) {
-      rows = (rows as Critter[]).filter((r) => isAvailableNow(r, hemi))
+    if (onlyNow) {
+      rows = rows.filter((r) =>
+        CRITTER_CATS.includes(r.__cat)
+          ? availArray(r as Critter, hemi).includes(currentMonth)
+          : true,
+      )
     }
     return rows
-  }, [data, q, onlyNow, hemi, isCritter, ko])
+  }, [data, q, onlyNow, hemi, ko])
 
-  // 진행률(현재 카테고리)
   const total = data.length
-  const donatedCount = data.filter(
-    (r) => map[`${cat}:${r.name}`]?.donated,
-  ).length
+  const donatedCount = data.filter((r) => map[`${r.__cat}:${r.name}`]?.donated).length
+  const hasCritters = data.some((r) => CRITTER_CATS.includes(r.__cat))
 
   return (
     <div>
@@ -72,18 +97,18 @@ export function CritterpediaPage() {
 
       {/* 카테고리 탭 */}
       <div className="no-scrollbar mb-4 -mx-4 flex gap-2 overflow-x-auto px-4">
-        {CATS.map((c) => (
+        {TABS.map((t) => (
           <button
-            key={c}
-            onClick={() => setCat(c)}
+            key={t.code}
+            onClick={() => setCat(t.code)}
             className={
               'shrink-0 rounded-xl px-4 py-2 text-sm font-semibold transition ' +
-              (cat === c
+              (cat === t.code
                 ? 'bg-leaf-500 text-white'
                 : 'bg-leaf-100 text-leaf-600 hover:bg-leaf-200 dark:bg-leaf-700 dark:text-sand-50')
             }
           >
-            {critterCategory[c]}
+            {t.label}
           </button>
         ))}
       </div>
@@ -93,11 +118,11 @@ export function CritterpediaPage() {
         <ProgressBar
           value={donatedCount}
           total={total}
-          label={`${critterCategory[cat]} 기증 진행률`}
+          label={`${cat === 'all' ? '전체' : critterCategory[cat]} 기증 진행률`}
         />
         <div className="flex flex-wrap items-center gap-3">
           <SearchBar value={q} onChange={setQ} />
-          {isCritter && (
+          {hasCritters && (
             <>
               <div className="flex overflow-hidden rounded-lg border border-leaf-200 text-xs dark:border-leaf-700">
                 <button
@@ -124,23 +149,28 @@ export function CritterpediaPage() {
             </>
           )}
         </div>
-        {!canSave && (
-          <p className="text-xs text-leaf-400">{ui.loginRequiredToSave}</p>
-        )}
+        {!canSave && <p className="text-xs text-leaf-400">{ui.loginRequiredToSave}</p>}
       </div>
 
-      {query.isLoading ? (
+      {isLoading ? (
         <Spinner />
-      ) : query.error ? (
-        <ErrorState error={query.error} />
+      ) : error ? (
+        <ErrorState error={error} />
       ) : filtered.length === 0 ? (
         <EmptyState />
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {filtered.map((r) => {
-            const st = map[`${cat}:${r.name}`] ?? { caught: false, donated: false }
+            const rcat = r.__cat
+            const isCritter = CRITTER_CATS.includes(rcat)
+            const st = map[`${rcat}:${r.name}`] ?? { caught: false, donated: false }
+            const av = isCritter
+              ? hemi === 'north'
+                ? (r as Critter).availability_north
+                : (r as Critter).availability_south
+              : undefined
             return (
-              <div key={r.name} className="card flex flex-col p-3">
+              <div key={`${rcat}:${r.name}`} className="card flex flex-col p-3">
                 <div className="flex h-24 items-center justify-center">
                   <img
                     src={r.image_url || (r as Critter).render_url}
@@ -149,44 +179,46 @@ export function CritterpediaPage() {
                     className="max-h-24 object-contain"
                   />
                 </div>
-                <div className="mt-2 text-sm font-semibold">{ko(r.name)}</div>
+                <div className="mt-2 text-sm font-semibold">{ko(r.name, rcat)}</div>
 
-                {/* 카테고리별 메타 */}
                 {isCritter && (
                   <div className="mt-1 space-y-0.5 text-xs text-leaf-500">
                     {(r as Critter).location && (
                       <div>
                         📍{' '}
-                        {cat === 'bugs'
+                        {rcat === 'bugs'
                           ? tr(bugLocation, (r as Critter).location)
                           : tr(fishLocation, (r as Critter).location)}
                       </div>
                     )}
                     <div>
-                      💰 너굴: {fmtBells((r as Critter).sell_nook)}
-                      {(r as Critter).sell_cj
-                        ? ` · CJ: ${fmtBells((r as Critter).sell_cj)}`
-                        : ''}
+                      💰 {fmtBells((r as Critter).sell_nook)}
+                      {(r as Critter).sell_cj ? ` · CJ ${fmtBells((r as Critter).sell_cj)}` : ''}
                       {(r as Critter).sell_flick
-                        ? ` · 플릭: ${fmtBells((r as Critter).sell_flick)}`
+                        ? ` · 플릭 ${fmtBells((r as Critter).sell_flick)}`
                         : ''}
                     </div>
-                    <div>
-                      🗓 {(r as Critter)[hemi]?.months || '연중'}
-                    </div>
-                  </div>
-                )}
-                {cat === 'fossils' && (
-                  <div className="mt-1 text-xs text-leaf-500">
-                    💰 {fmtBells((r as Fossil).sell)}
-                    {(r as Fossil).fossil_group && (
-                      <div className="opacity-70">{(r as Fossil).fossil_group}</div>
+                    {av && av.length > 0 ? (
+                      av.map((a, i) => (
+                        <div key={i}>
+                          🗓 {fmtMonths(a.months)} · ⏰ {fmtTime(a.time)}
+                        </div>
+                      ))
+                    ) : (
+                      <div>🗓 연중 · ⏰ 하루 종일</div>
                     )}
                   </div>
                 )}
-                {cat === 'art' && (
+                {rcat === 'fossils' && (
+                  <div className="mt-1 text-xs text-leaf-500">
+                    💰 {fmtBells((r as Fossil).sell)}
+                    {(r as Fossil).fossil_group && (
+                      <div className="opacity-70">{ko((r as Fossil).fossil_group!, 'fossils')}</div>
+                    )}
+                  </div>
+                )}
+                {rcat === 'art' && (
                   <div className="mt-1 space-y-0.5 text-xs text-leaf-500">
-                    {(r as Art).art_name && <div className="italic">{(r as Art).art_name}</div>}
                     <div>💰 판매 {fmtBells((r as Art).sell)}</div>
                     <div>
                       {(r as Art).has_fake ? (
@@ -195,15 +227,9 @@ export function CritterpediaPage() {
                         <span className="text-leaf-500">진품만 존재</span>
                       )}
                     </div>
-                    {(r as Art).authenticity && (
-                      <div className="opacity-70" title={(r as Art).authenticity}>
-                        식별: {(r as Art).authenticity!.slice(0, 40)}…
-                      </div>
-                    )}
                   </div>
                 )}
 
-                {/* 토글 */}
                 <div className="mt-auto flex gap-1.5 pt-2">
                   {isCritter && (
                     <ToggleButton
@@ -211,7 +237,7 @@ export function CritterpediaPage() {
                       active={st.caught}
                       disabled={!canSave}
                       onClick={() =>
-                        toggle.mutate({ category: cat, entryId: r.name, field: 'caught' })
+                        toggle.mutate({ category: rcat, entryId: r.name, field: 'caught' })
                       }
                     />
                   )}
@@ -220,7 +246,7 @@ export function CritterpediaPage() {
                     active={st.donated}
                     disabled={!canSave}
                     onClick={() =>
-                      toggle.mutate({ category: cat, entryId: r.name, field: 'donated' })
+                      toggle.mutate({ category: rcat, entryId: r.name, field: 'donated' })
                     }
                   />
                 </div>
