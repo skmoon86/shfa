@@ -1,0 +1,22 @@
+# ── 비밀/민감정보 (절대 커밋 금지) ──────────────────
+웹서비스관련정보.txt
+**/.env
+**/.env.*
+!**/.env.example
+supabase/.env
+supabase/.temp
+supabase/.branches
+
+# ── 의존성/빌드 산출물 ───────────────────────────────
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.vercel/
+
+# ── 로그/OS/에디터 ───────────────────────────────────
+*.log
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/

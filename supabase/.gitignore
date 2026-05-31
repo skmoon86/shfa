@@ -1,0 +1,5 @@
+# Supabase 로컬 산출물 / 비밀
+.branches
+.temp
+.env
+.env.local
