@@ -89,7 +89,7 @@ export function VillagersPage() {
             checked={favOnly}
             onChange={(e) => setFavOnly(e.target.checked)}
           />
-          ⭐ 즐겨찾기만
+          ❤️ 내 주민만
         </label>
       </div>
 
@@ -109,10 +109,10 @@ export function VillagersPage() {
                   <button
                     disabled={!canSave}
                     onClick={() => toggle.mutate(v.name)}
-                    title={canSave ? '즐겨찾기' : ui.loginRequiredToSave}
+                    title={canSave ? '내 주민' : ui.loginRequiredToSave}
                     className="absolute right-2 top-2 text-lg disabled:opacity-30"
                   >
-                    {isFav ? '⭐' : '☆'}
+                    {isFav ? '❤️' : '🤍'}
                   </button>
                   <button onClick={() => setDetail(v)} className="flex flex-col items-center">
                     <img

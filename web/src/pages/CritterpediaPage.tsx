@@ -34,6 +34,7 @@ export function CritterpediaPage() {
   const [q, setQ] = useState('')
   const [hemi, setHemi] = useState<'north' | 'south'>('north')
   const [onlyNow, setOnlyNow] = useState(false)
+  const [onlyUndonated, setOnlyUndonated] = useState(false)
   const canSave = useCanSave()
   const { map, toggle } = useCritterpedia()
   const ko = useKoNamesMulti(DATA_CATS)
@@ -94,8 +95,11 @@ export function CritterpediaPage() {
           : true,
       )
     }
+    if (onlyUndonated) {
+      rows = rows.filter((r) => !map[`${r.__cat}:${r.name}`]?.donated)
+    }
     return rows
-  }, [data, q, onlyNow, hemi, ko])
+  }, [data, q, onlyNow, onlyUndonated, hemi, ko, map])
 
   const total = data.length
   const donatedCount = data.filter((r) => map[`${r.__cat}:${r.name}`]?.donated).length
@@ -148,6 +152,14 @@ export function CritterpediaPage() {
               </label>
             </>
           )}
+          <label className="flex items-center gap-1.5 text-sm">
+            <input
+              type="checkbox"
+              checked={onlyUndonated}
+              onChange={(e) => setOnlyUndonated(e.target.checked)}
+            />
+            미기증만
+          </label>
         </div>
         {!canSave && <p className="text-xs text-leaf-400">{ui.loginRequiredToSave}</p>}
       </div>

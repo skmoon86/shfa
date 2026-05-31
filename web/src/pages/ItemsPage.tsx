@@ -25,7 +25,7 @@ export function ItemsPage() {
   const [selected, setSelected] = useState<Set<DataCat>>(new Set())
   const [q, setQ] = useState('')
   const [limit, setLimit] = useState(PAGE)
-  const [filter, setFilter] = useState<'all' | 'owned' | 'wishlist'>('all')
+  const [filter, setFilter] = useState<'all' | 'owned' | 'unowned' | 'wishlist'>('all')
   const [reformOnly, setReformOnly] = useState(false)
   const [sortBy, setSortBy] = useState<'default' | 'name'>('default')
   const [detail, setDetail] = useState<Row | null>(null)
@@ -86,7 +86,8 @@ export function ItemsPage() {
       )
     }
     if (reformOnly) rows = rows.filter((r) => r.customizable)
-    if (filter !== 'all') rows = rows.filter((r) => map[r.name]?.[filter])
+    if (filter === 'unowned') rows = rows.filter((r) => !map[r.name]?.owned)
+    else if (filter !== 'all') rows = rows.filter((r) => map[r.name]?.[filter])
     return rows
   }, [data, q, reformOnly, filter, map, ko])
 
@@ -127,6 +128,7 @@ export function ItemsPage() {
         >
           <option value="all">{ui.all}</option>
           <option value="owned">{ui.owned}</option>
+          <option value="unowned">미보유</option>
           <option value="wishlist">{ui.wishlist}</option>
         </select>
         <select
@@ -206,7 +208,7 @@ export function ItemsPage() {
                       onClick={() => toggle.mutate({ itemId: r.name, category: r.__cat, field: 'owned' })}
                     />
                     <ToggleButton
-                      label={ui.wishlist}
+                      label="wish"
                       active={st.wishlist}
                       disabled={!canSave}
                       onClick={() => toggle.mutate({ itemId: r.name, category: r.__cat, field: 'wishlist' })}
