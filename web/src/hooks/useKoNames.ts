@@ -38,9 +38,17 @@ export function useKoNamesMulti(categories: string[]) {
   categories.forEach((c, i) => {
     maps[c] = results[i].data ?? {}
   })
+  // ko(name, category): 주어진 카테고리에서 먼저 찾고(빠른 경로),
+  // 없으면 전체 카테고리 맵을 폴백 스캔한다. 런타임 __cat(Nookipedia 분류)이
+  // 한글맵 파일 분류와 달라도 한글명을 찾도록 해 검색/표시 누락을 방지.
   return (name?: string, category?: string) => {
     if (!name) return ''
-    const m = category ? maps[category] : undefined
-    return (m && m[name.toLowerCase().trim()]) ?? name
+    const key = name.toLowerCase().trim()
+    if (category && maps[category]?.[key]) return maps[category][key]
+    for (const c of categories) {
+      const v = maps[c]?.[key]
+      if (v) return v
+    }
+    return name
   }
 }

@@ -9,7 +9,7 @@ import { SearchBar } from '../components/SearchBar'
 import { CategoryTabs } from '../components/CategoryTabs'
 import { ItemDetailModal, type DetailItem } from '../components/ItemDetailModal'
 import { itemCategory, ui, tSource } from '../i18n/ko'
-import { fmtBells } from '../lib/format'
+import { fmtBells, fmtBuy } from '../lib/format'
 
 type DataCat = 'furniture' | 'clothing' | 'interior' | 'tools' | 'items' | 'photos' | 'gyroids'
 const DATA_CATS: DataCat[] = ['furniture', 'clothing', 'interior', 'tools', 'items', 'photos', 'gyroids']
@@ -85,7 +85,7 @@ export function ItemsPage() {
   const filtered = useMemo(() => {
     let rows = data
     if (q.trim()) {
-      const l = q.toLowerCase()
+      const l = q.trim().toLowerCase()
       rows = rows.filter(
         (r) => r.name.toLowerCase().includes(l) || ko(r.name, r.__cat).toLowerCase().includes(l),
       )
@@ -186,9 +186,15 @@ export function ItemsPage() {
                   >
                     {itemKo(r)}
                   </button>
-                  <div className="mt-1 text-xs text-leaf-500">
-                    💰 {fmtBells(r.sell)} 벨
-                    {r.customizable && <span className="ml-1 text-amber-600">🎨 리폼</span>}
+                  <div className="mt-1 space-y-0.5 text-xs text-leaf-500">
+                    <div>🛒 {ui.buyPrice} {fmtBuy(r.buy)}</div>
+                    <div>💰 {ui.sellPrice} {fmtBells(r.sell)} 벨</div>
+                    <div className="flex flex-wrap gap-1">
+                      {r.customizable && <span className="text-amber-600">🎨 {ui.reform}</span>}
+                      {!r.customizable && (r.variations?.length ?? 0) >= 2 && (
+                        <span className="text-sky-600">🔀 {ui.variations} {r.variations!.length}종</span>
+                      )}
+                    </div>
                   </div>
                   {acq(r) && (
                     <div className="mt-0.5 truncate text-[11px] text-leaf-400" title={acq(r)}>

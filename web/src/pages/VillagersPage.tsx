@@ -16,7 +16,7 @@ export function VillagersPage() {
   const [q, setQ] = useState('')
   const [species, setSpecies] = useState('')
   const [pers, setPers] = useState('')
-  const [favOnly, setFavOnly] = useState(false)
+  const [favOnly, setFavOnly] = useState(true)
   const [limit, setLimit] = useState(PAGE)
   const [detail, setDetail] = useState<Villager | null>(null)
   const canSave = useCanSave()
@@ -98,7 +98,17 @@ export function VillagersPage() {
       ) : query.error ? (
         <ErrorState error={query.error} />
       ) : shown.length === 0 ? (
-        <EmptyState />
+        favOnly && favorites.size === 0 ? (
+          <div className="card p-8 text-center text-sm text-leaf-500">
+            <p className="mb-1 text-base">❤️ 내 주민이 아직 없어요</p>
+            <p className="text-leaf-400">
+              주민 카드의 하트를 눌러 추가하거나, 위 '내 주민만' 체크를 해제하세요.
+            </p>
+            {!canSave && <p className="mt-1 text-leaf-400">{ui.loginRequiredToSave}</p>}
+          </div>
+        ) : (
+          <EmptyState />
+        )
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">

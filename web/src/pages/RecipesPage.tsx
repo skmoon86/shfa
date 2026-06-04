@@ -73,7 +73,7 @@ export function RecipesPage() {
   const sources = useMemo(() => {
     const set = new Set<string>()
     for (const r of data) for (const a of r.availability ?? []) if (a.from) set.add(a.from)
-    return [...set].sort()
+    return [...set].sort((a, b) => tSource(a).localeCompare(tSource(b), 'ko'))
   }, [data])
 
   const filtered = useMemo(() => {

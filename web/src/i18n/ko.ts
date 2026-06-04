@@ -132,18 +132,7 @@ export const sourceLabel: Record<string, string> = {
   'Test Your DIY Skills': 'DIY 실력 테스트',
   'Custom Fencing in a Flash': '울타리 DIY 레시피',
   'Wildest Dreams DIY': '꿈꾸던 DIY',
-  // 주민(성격별)
-  'any villager': '아무 주민',
-  'normal villager': '친절(보통) 주민',
-  'peppy villager': '명랑 주민',
-  'snooty villager': '성숙(거만) 주민',
-  'cranky villager': '무뚝뚝 주민',
-  'lazy villager': '먹보 주민',
-  'jock villager': '운동광 주민',
-  'smug villager': '느끼 주민',
-  'big sister villager': '단순(누나) 주민',
-  Villagers: '주민',
-  Villager: '주민',
+  // 주민(성격별)은 villagerSource()에서 단/복수·대소문자 무시로 처리
   Balloons: '풍선',
   // 상점 / NPC / 시설
   'Able Sisters': '에이블 자매(의상실)',
@@ -270,8 +259,31 @@ function patternSource(from: string): string | null {
   return null
 }
 
+// 주민 입수처: 데이터는 복수형·대소문자 혼재("Cranky villagers", "Normal villagers",
+// "Big Sister villagers", "All villagers" 등). 성격별은 "주민:<성격>", 아무나면 "아무 주민".
+const VILLAGER_PERS: Record<string, string> = {
+  normal: '친절(보통)',
+  peppy: '명랑',
+  snooty: '성숙(거만)',
+  cranky: '무뚝뚝',
+  lazy: '먹보',
+  jock: '운동광',
+  smug: '느끼',
+  'big sister': '단순(누나)',
+  sisterly: '단순(누나)',
+}
+function villagerSource(from: string): string | null {
+  const t = from.trim().toLowerCase()
+  const m = /^(normal|peppy|snooty|cranky|lazy|jock|smug|big sister|sisterly|all|any)\s+villagers?\b/.exec(t)
+  if (m) return m[1] === 'all' || m[1] === 'any' ? '아무 주민' : `주민:${VILLAGER_PERS[m[1]]}`
+  if (/^villagers?$/.test(t)) return '주민'
+  return null
+}
+
 export function tSource(from: string): string {
   if (!from) return ''
+  const vil = villagerSource(from)
+  if (vil) return vil
   if (sourceLabel[from]) return sourceLabel[from]
   const lower = from.toLowerCase()
   const hit = Object.keys(sourceLabel).find((k) => k.toLowerCase() === lower)

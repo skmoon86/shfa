@@ -118,6 +118,37 @@ export function VillagerDetailModal({
           <Info label="호감 색상" value={trList(colorKo, d?.fav_colors)} />
         </div>
 
+        {/* 집 (외관·내부) */}
+        {(d?.house_exterior_url || d?.house_interior_url) && (
+          <section className="mb-4">
+            <h3 className="mb-2 text-sm font-bold">🏠 집</h3>
+            <div className="grid grid-cols-2 gap-3">
+              {d?.house_exterior_url && (
+                <figure className="rounded-xl border border-leaf-100 p-2 text-center dark:border-leaf-700">
+                  <img
+                    src={d.house_exterior_url}
+                    alt="집 외관"
+                    loading="lazy"
+                    className="mx-auto max-h-48 w-full object-contain"
+                  />
+                  <figcaption className="mt-1 text-xs text-leaf-400">외관</figcaption>
+                </figure>
+              )}
+              {d?.house_interior_url && (
+                <figure className="rounded-xl border border-leaf-100 p-2 text-center dark:border-leaf-700">
+                  <img
+                    src={d.house_interior_url}
+                    alt="집 내부"
+                    loading="lazy"
+                    className="mx-auto max-h-48 w-full object-contain"
+                  />
+                  <figcaption className="mt-1 text-xs text-leaf-400">내부</figcaption>
+                </figure>
+              )}
+            </div>
+          </section>
+        )}
+
         {/* 호감 선물 추정 */}
         <section className="mb-4">
           <h3 className="mb-2 text-sm font-bold">
