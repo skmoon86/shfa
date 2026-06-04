@@ -25,8 +25,9 @@ export function ItemsPage() {
   const [selected, setSelected] = useState<Set<DataCat>>(new Set())
   const [q, setQ] = useState('')
   const [limit, setLimit] = useState(PAGE)
-  const [filter, setFilter] = useState<'all' | 'owned' | 'unowned' | 'wishlist' | 'catalog'>('all')
+  const [filter, setFilter] = useState<'all' | 'owned' | 'unowned' | 'wishlist'>('all')
   const [reformOnly, setReformOnly] = useState(false)
+  const [catalogOnly, setCatalogOnly] = useState(false)
   const [sortBy, setSortBy] = useState<'default' | 'name'>('default')
   const [detail, setDetail] = useState<Row | null>(null)
   const canSave = useCanSave()
@@ -91,11 +92,11 @@ export function ItemsPage() {
       )
     }
     if (reformOnly) rows = rows.filter((r) => r.customizable)
-    if (filter === 'catalog') rows = rows.filter((r) => inCatalog(r))
-    else if (filter === 'unowned') rows = rows.filter((r) => !map[r.name]?.owned)
+    if (catalogOnly) rows = rows.filter((r) => inCatalog(r))
+    if (filter === 'unowned') rows = rows.filter((r) => !map[r.name]?.owned)
     else if (filter !== 'all') rows = rows.filter((r) => map[r.name]?.[filter])
     return rows
-  }, [data, q, reformOnly, filter, map, ko])
+  }, [data, q, reformOnly, catalogOnly, filter, map, ko])
 
   const sorted = useMemo(() => {
     if (sortBy !== 'name') return filtered
@@ -104,7 +105,8 @@ export function ItemsPage() {
   }, [filtered, sortBy, ko])
 
   const shown = sorted.slice(0, limit)
-  const ownedCount = data.filter((r) => map[r.name]?.owned).length
+  // 조회조건(검색·필터·카탈로그·리폼)이 적용된 결과 기준 수량
+  const ownedCount = filtered.filter((r) => map[r.name]?.owned).length
 
   return (
     <div>
@@ -131,7 +133,6 @@ export function ItemsPage() {
           <option value="owned">{ui.owned}</option>
           <option value="unowned">미보유</option>
           <option value="wishlist">{ui.wishlist}</option>
-          <option value="catalog">카탈로그 등록가능</option>
         </select>
         <select
           value={sortBy}
@@ -149,8 +150,16 @@ export function ItemsPage() {
           />
           {ui.reformable}만
         </label>
+        <label className="flex items-center gap-1.5 text-sm">
+          <input
+            type="checkbox"
+            checked={catalogOnly}
+            onChange={(e) => setCatalogOnly(e.target.checked)}
+          />
+          카탈로그 등록가능
+        </label>
         <span className="ml-auto text-xs text-leaf-400">
-          {ui.owned} {ownedCount} / 전체 {data.length}
+          {ui.owned} {ownedCount} / 전체 {filtered.length}
         </span>
       </div>
 
