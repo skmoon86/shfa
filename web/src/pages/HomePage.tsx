@@ -2,16 +2,18 @@ import { Link } from 'react-router-dom'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { nookipedia } from '../lib/nookipedia'
 import { useAuth } from '../context/AuthContext'
-import { useCritterpedia, useRecipeProgress } from '../hooks/useProgress'
+import { useCritterpedia, useItemCollection, useRecipeProgress } from '../hooks/useProgress'
 import { ProgressBar } from '../components/ProgressBar'
 import { critterCategory, nav, ui } from '../i18n/ko'
 
 const CRITTER_CATS = ['fish', 'bugs', 'sea', 'fossils', 'art'] as const
+const ITEM_CATS = ['furniture', 'clothing', 'interior', 'tools', 'items', 'photos', 'gyroids'] as const
 
 export function HomePage() {
   const { user, signInWithGoogle } = useAuth()
   const { map } = useCritterpedia()
   const { learned } = useRecipeProgress()
+  const { map: itemMap } = useItemCollection()
 
   const critterQueries = useQueries({
     queries: CRITTER_CATS.map((c) => ({
@@ -25,6 +27,14 @@ export function HomePage() {
     })),
   })
   const recipesQ = useQuery({ queryKey: ['nook', 'recipes'], queryFn: () => nookipedia.recipes() })
+  const itemQueries = useQueries({
+    queries: ITEM_CATS.map((c) => ({
+      queryKey: ['nook', c],
+      queryFn: () => nookipedia[c](),
+    })),
+  })
+  const itemTotal = itemQueries.reduce((sum, qr) => sum + (qr.data?.length ?? 0), 0)
+  const itemOwned = Object.values(itemMap).filter((s) => s.owned).length
 
   return (
     <div className="space-y-6">
@@ -67,6 +77,7 @@ export function HomePage() {
             total={(recipesQ.data ?? []).length}
             label="DIY 레시피 습득"
           />
+          <ProgressBar value={itemOwned} total={itemTotal} label="아이템 보유" />
         </div>
       </section>
 
