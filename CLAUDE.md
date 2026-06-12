@@ -57,7 +57,7 @@ supabase db push --password <DB비번>
 - **화석**: `/nh/fossils/all` (그룹 배열 → 개별 조각 평탄화). `/nh/fossils`·`/nh/fossil_groups`는 404.
 - **출현 시기 필드**(생물): `north`/`south` 객체 없음. 실제는 `availability_north/south`(배열 `{months,time}`), `n_availability_array/s_availability_array`(월 번호), `times_by_month_*`. 월/시간은 **축약형**("May – Oct") — `fmtMonths`/`fmtTime`로 한글화.
 - **카테고리 값 대소문자 혼재**: furniture에 `Wall-Mounted`와 `Wall-mounted` 둘 다 존재 → `tr`은 대소문자 무시 매칭.
-- **그림/미술품**: furniture 데이터에도 포함(`(fake)`/`(real)` 접미사). furniture 한글맵에 Artwork 시트 포함.
+- **그림/미술품**: furniture 데이터에도 포함 — 위작만 `(fake)` 접미사, 진품은 접미사 없음(`(real)` 접미사는 실데이터에 없음). 위작 존재 여부는 `/nh/art`의 `has_fake`로 판별(이름만으론 일반 가구와 구분 불가). 아이템 페이지는 위작 행 제외 + 위작 없는 명화에 "(위작없음)" 표기. furniture 한글맵에 Artwork 시트 포함.
 - **대용량/불안정**: furniture(3.6MB) 등 대용량 엔드포인트는 Nookipedia가 간헐적으로 502/504. 프록시가 재시도+만료캐시 폴백, 페이지는 일부 실패해도 정상분만 표시.
 
 ## 데이터 모델 (Postgres, 모두 RLS = 본인 행만)

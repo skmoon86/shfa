@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useQueries } from '@tanstack/react-query'
+import { useQueries, useQuery } from '@tanstack/react-query'
 import { nookipedia } from '../lib/nookipedia'
 import { useItemCollection } from '../hooks/useProgress'
 import { useKoNamesMulti } from '../hooks/useKoNames'
@@ -34,9 +34,21 @@ export function ItemsPage() {
   const { map, toggle } = useItemCollection()
   const ko = useKoNamesMulti(DATA_CATS)
 
+  // 명화 위작 존재 여부 판별용(도감 페이지와 캐시 공유)
+  const artQ = useQuery({ queryKey: ['nook', 'art'], queryFn: () => nookipedia.art() })
+  // 위작이 존재하지 않는 명화 영문명 집합
+  const noFakeArt = useMemo(
+    () =>
+      new Set(
+        (artQ.data ?? []).filter((a) => !a.has_fake).map((a) => a.name.toLowerCase().trim()),
+      ),
+    [artQ.data],
+  )
+
   // 이름 한글화 ((fake)/(real) 접미사 처리 포함)
   const itemKo = (r: Row): string => {
     const direct = ko(r.name, r.__cat)
+    if (noFakeArt.has(r.name.toLowerCase().trim())) return direct + ' (위작없음)'
     if (direct !== r.name) return direct
     const m = /^(.*?)\s*\((fake|real)\)$/i.exec(r.name)
     if (m) {
@@ -71,6 +83,8 @@ export function ItemsPage() {
     const out: Row[] = []
     cats.forEach((c, i) => {
       for (const r of (queries[i].data ?? []) as DetailItem[]) {
+        // 명화 위작은 수집 대상이 아니므로 목록에서 제외
+        if (/\(fake\)$/i.test(r.name)) continue
         out.push(Object.assign({ __cat: c }, r) as Row)
       }
     })
