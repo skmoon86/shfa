@@ -77,4 +77,5 @@ supabase db push --password <DB비번>
 
 ## 작업 컨벤션
 - 변경 후 `cd web && npm run build`로 타입/빌드 검증.
-- 커밋 메시지는 한국어. push는 사용자가 직접(자동 차단됨) → Vercel 자동 배포.
+- 커밋 메시지는 한국어. push는 skmoon86 계정으로(원격 URL에 사용자명 포함: `https://skmoon86@github.com/...`) → Vercel 자동 배포.
+- **DB 마이그레이션은 Claude가 직접 적용**: 마이그레이션 추가 후 `supabase db push --password <DB비번>` 실행(비번은 `웹서비스관련정보.txt`). 사용자에게 미루지 말 것. 마이그레이션 SQL은 재실행 가능하게 멱등(`if not exists`, `drop policy if exists`)으로 작성.

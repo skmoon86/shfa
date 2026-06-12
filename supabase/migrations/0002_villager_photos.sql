@@ -8,5 +8,6 @@ create table if not exists public.villager_photos (
 );
 
 alter table public.villager_photos enable row level security;
+drop policy if exists "본인 액자 전체접근" on public.villager_photos;
 create policy "본인 액자 전체접근" on public.villager_photos
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
