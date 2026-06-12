@@ -36,6 +36,12 @@ const ALLOWED_NH = new Set([
 // nh 아래가 아닌 게임 공통 엔드포인트
 const ALLOWED_TOP = new Set(['villagers'])
 
+// Nookipedia 목록 엔드포인트 누락 보정: 단건 조회로는 존재하나 목록에서 빠진 아이템.
+// 업스트림이 수정되면 이미 목록에 있으므로 자동으로 무시된다.
+const LIST_PATCHES: Record<string, string[]> = {
+  'nh/tools': ['yellow balloon'],
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
@@ -156,7 +162,34 @@ Deno.serve(async (req) => {
     )
   }
 
-  // 4) 캐시 저장(베스트에포트)
+  // 4) 목록 누락 보정(베스트에포트): 빠진 항목을 단건 조회로 받아 병합
+  const missing = LIST_PATCHES[segments.join('/')]
+  if (missing && Array.isArray(payload)) {
+    const names = new Set(
+      (payload as { name?: string }[]).map((it) => (it.name ?? '').toLowerCase()),
+    )
+    for (const name of missing) {
+      if (names.has(name.toLowerCase())) continue
+      try {
+        const res = await fetch(
+          `${NOOKIPEDIA_BASE}/${segments.join('/')}/${encodeURIComponent(name)}`,
+          {
+            headers: {
+              'X-API-KEY': apiKey,
+              'Accept-Version': ACCEPT_VERSION,
+              Accept: 'application/json',
+            },
+            signal: AbortSignal.timeout(10000),
+          },
+        )
+        if (res.ok) (payload as unknown[]).push(await res.json())
+      } catch (_e) {
+        // 보정 실패는 무시 — 원본 목록 그대로 반환
+      }
+    }
+  }
+
+  // 5) 캐시 저장(베스트에포트)
   if (admin) {
     await admin
       .from('nook_cache')
