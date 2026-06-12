@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { nookipedia, type Villager } from '../lib/nookipedia'
-import { useFavoriteVillagers } from '../hooks/useProgress'
+import { useFavoriteVillagers, useVillagerPhotos } from '../hooks/useProgress'
 import { useKoNames } from '../hooks/useKoNames'
 import { useCanSave } from '../components/Toggle'
 import { Spinner, ErrorState, EmptyState } from '../components/states'
@@ -17,10 +17,12 @@ export function VillagersPage() {
   const [species, setSpecies] = useState('')
   const [pers, setPers] = useState('')
   const [favOnly, setFavOnly] = useState(true)
+  const [photoOnly, setPhotoOnly] = useState(false)
   const [limit, setLimit] = useState(PAGE)
   const [detail, setDetail] = useState<Villager | null>(null)
   const canSave = useCanSave()
   const { favorites, toggle } = useFavoriteVillagers()
+  const { photos, toggle: togglePhoto } = useVillagerPhotos()
   const ko = useKoNames('villagers')
 
   const query = useQuery({
@@ -48,10 +50,13 @@ export function VillagersPage() {
     if (species) rows = rows.filter((v) => v.species === species)
     if (pers) rows = rows.filter((v) => v.personality === pers)
     if (favOnly) rows = rows.filter((v) => favorites.has(v.name))
+    if (photoOnly) rows = rows.filter((v) => photos.has(v.name))
     return rows
-  }, [data, q, species, pers, favOnly, favorites])
+  }, [data, q, species, pers, favOnly, favorites, photoOnly, photos])
 
   const shown = filtered.slice(0, limit)
+  // 조회조건이 적용된 결과 기준 액자 획득 수량
+  const photoCount = filtered.filter((v) => photos.has(v.name)).length
 
   return (
     <div>
@@ -91,6 +96,17 @@ export function VillagersPage() {
           />
           ❤️ 내 주민만
         </label>
+        <label className="flex items-center gap-1.5 text-sm">
+          <input
+            type="checkbox"
+            checked={photoOnly}
+            onChange={(e) => setPhotoOnly(e.target.checked)}
+          />
+          🖼️ 액자 획득만
+        </label>
+        <span className="ml-auto text-xs text-leaf-400">
+          액자 {photoCount} / 전체 {filtered.length}명
+        </span>
       </div>
 
       {query.isLoading ? (
@@ -114,6 +130,7 @@ export function VillagersPage() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {shown.map((v) => {
               const isFav = favorites.has(v.name)
+              const hasPhoto = photos.has(v.name)
               return (
                 <div key={v.name} className="card relative flex flex-col items-center p-3">
                   <button
@@ -123,6 +140,16 @@ export function VillagersPage() {
                     className="absolute right-2 top-2 text-lg disabled:opacity-30"
                   >
                     {isFav ? '❤️' : '🤍'}
+                  </button>
+                  <button
+                    disabled={!canSave}
+                    onClick={() => togglePhoto.mutate(v.name)}
+                    title={canSave ? '액자 획득' : ui.loginRequiredToSave}
+                    className={`absolute left-2 top-2 text-lg disabled:opacity-30 ${
+                      hasPhoto ? '' : 'opacity-25 grayscale'
+                    }`}
+                  >
+                    🖼️
                   </button>
                   <button onClick={() => setDetail(v)} className="flex flex-col items-center">
                     <img

@@ -231,3 +231,57 @@ export function useFavoriteVillagers() {
 
   return { favorites: query.data ?? new Set<string>(), toggle }
 }
+
+// ── 주민 액자(사진) 획득 ──────────────────────────────────
+export function useVillagerPhotos() {
+  const { user } = useAuth()
+  const qc = useQueryClient()
+  const uid = user?.id
+  const key = ['villager-photos', uid]
+
+  const query = useQuery({
+    queryKey: key,
+    enabled: !!uid,
+    queryFn: async (): Promise<Set<string>> => {
+      const { data, error } = await supabase
+        .from('villager_photos')
+        .select('villager_id')
+      if (error) throw error
+      return new Set((data ?? []).map((r) => r.villager_id))
+    },
+  })
+
+  const toggle = useMutation({
+    mutationFn: async (villagerId: string) => {
+      if (!uid) throw new Error('로그인이 필요합니다.')
+      const has = (qc.getQueryData<Set<string>>(key) ?? new Set()).has(
+        villagerId,
+      )
+      if (has) {
+        const { error } = await supabase
+          .from('villager_photos')
+          .delete()
+          .eq('user_id', uid)
+          .eq('villager_id', villagerId)
+        if (error) throw error
+        return { villagerId, has: false }
+      } else {
+        const { error } = await supabase
+          .from('villager_photos')
+          .insert({ user_id: uid, villager_id: villagerId })
+        if (error) throw error
+        return { villagerId, has: true }
+      }
+    },
+    onSuccess: ({ villagerId, has }) => {
+      qc.setQueryData<Set<string>>(key, (old) => {
+        const next = new Set(old ?? [])
+        if (has) next.add(villagerId)
+        else next.delete(villagerId)
+        return next
+      })
+    },
+  })
+
+  return { photos: query.data ?? new Set<string>(), toggle }
+}

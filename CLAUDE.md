@@ -61,7 +61,7 @@ supabase db push --password <DB비번>
 - **대용량/불안정**: furniture(3.6MB) 등 대용량 엔드포인트는 Nookipedia가 간헐적으로 502/504. 프록시가 재시도+만료캐시 폴백, 페이지는 일부 실패해도 정상분만 표시.
 
 ## 데이터 모델 (Postgres, 모두 RLS = 본인 행만)
-`profiles`, `critterpedia_progress(user_id,category,entry_id,caught,donated)`, `recipe_progress`, `item_collection(owned,wishlist)`, `favorite_villagers`, `nook_cache`(Edge Function 전용). entry_id/item_id/recipe_id = 영문 name.
+`profiles`, `critterpedia_progress(user_id,category,entry_id,caught,donated)`, `recipe_progress`, `item_collection(owned,wishlist)`, `favorite_villagers`, `villager_photos`(액자 획득), `nook_cache`(Edge Function 전용). entry_id/item_id/recipe_id/villager_id = 영문 name.
 
 ## PWA / 안드로이드 APK(TWA)
 - 앱은 **PWA**. `vite-plugin-pwa`(generateSW)가 `manifest.webmanifest`+`sw.js` 생성, 매니페스트/SW 등록은 `index.html`에 자동 주입(별도 import 코드 없음).
