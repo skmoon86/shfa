@@ -104,7 +104,8 @@ export function RecipesPage() {
       return next
     })
 
-  const learnedCount = data.filter((r) => learned.has(r.name)).length
+  // 조회조건(검색·카테고리·입수처·미습득만)이 적용된 결과 기준 수량
+  const learnedCount = filtered.filter((r) => learned.has(r.name)).length
 
   return (
     <div>
@@ -119,7 +120,7 @@ export function RecipesPage() {
       />
 
       <div className="card mb-4 space-y-3 p-4">
-        <ProgressBar value={learnedCount} total={data.length} label="레시피 습득률" />
+        <ProgressBar value={learnedCount} total={filtered.length} label="레시피 습득률" />
         <div className="flex flex-wrap items-center gap-3">
           <SearchBar value={q} onChange={setQ} />
           <select
