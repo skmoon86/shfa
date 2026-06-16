@@ -25,7 +25,7 @@ export function ItemsPage() {
   const [selected, setSelected] = useState<Set<DataCat>>(new Set())
   const [q, setQ] = useState('')
   const [limit, setLimit] = useState(PAGE)
-  const [filter, setFilter] = useState<'all' | 'owned' | 'unowned' | 'wishlist'>('all')
+  const [filter, setFilter] = useState<'all' | 'owned' | 'unowned' | 'wishlist' | 'hidden'>('all')
   const [reformOnly, setReformOnly] = useState(false)
   const [catalogOnly, setCatalogOnly] = useState(false)
   const [sortBy, setSortBy] = useState<'default' | 'name'>('default')
@@ -99,6 +99,11 @@ export function ItemsPage() {
 
   const filtered = useMemo(() => {
     let rows = data
+    // 숨김 항목: '숨김' 보기에서만 노출하고, 그 외 모든 보기/카운트에서 제외
+    rows =
+      filter === 'hidden'
+        ? rows.filter((r) => map[r.name]?.hidden)
+        : rows.filter((r) => !map[r.name]?.hidden)
     if (q.trim()) {
       const l = q.trim().toLowerCase()
       rows = rows.filter(
@@ -108,7 +113,8 @@ export function ItemsPage() {
     if (reformOnly) rows = rows.filter((r) => r.customizable)
     if (catalogOnly) rows = rows.filter((r) => inCatalog(r))
     if (filter === 'unowned') rows = rows.filter((r) => !map[r.name]?.owned)
-    else if (filter !== 'all') rows = rows.filter((r) => map[r.name]?.[filter])
+    else if (filter === 'owned' || filter === 'wishlist')
+      rows = rows.filter((r) => map[r.name]?.[filter])
     return rows
   }, [data, q, reformOnly, catalogOnly, filter, map, ko])
 
@@ -147,6 +153,7 @@ export function ItemsPage() {
           <option value="owned">{ui.owned}</option>
           <option value="unowned">미보유</option>
           <option value="wishlist">{ui.wishlist}</option>
+          <option value="hidden">숨김</option>
         </select>
         <select
           value={sortBy}
@@ -173,7 +180,9 @@ export function ItemsPage() {
           카탈로그 등록가능
         </label>
         <span className="ml-auto text-xs text-leaf-400">
-          {ui.owned} {ownedCount} / 전체 {filtered.length}
+          {filter === 'hidden'
+            ? `숨김 ${filtered.length}`
+            : `${ui.owned} ${ownedCount} / 전체 ${filtered.length}`}
         </span>
       </div>
 
@@ -192,9 +201,19 @@ export function ItemsPage() {
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {shown.map((r) => {
-              const st = map[r.name] ?? { owned: false, wishlist: false }
+              const st = map[r.name] ?? { owned: false, wishlist: false, hidden: false }
               return (
-                <div key={`${r.__cat}:${r.name}`} className="card flex flex-col p-3">
+                <div key={`${r.__cat}:${r.name}`} className="card relative flex flex-col p-3">
+                  <button
+                    onClick={() =>
+                      toggle.mutate({ itemId: r.name, category: r.__cat, field: 'hidden' })
+                    }
+                    disabled={!canSave}
+                    title={st.hidden ? '숨김 해제' : '숨기기'}
+                    className="absolute right-1.5 top-1.5 z-10 rounded-full border border-leaf-200 bg-white/80 px-1.5 py-0.5 text-xs leading-none text-leaf-500 backdrop-blur hover:bg-leaf-100 disabled:opacity-40 dark:border-leaf-700 dark:bg-leaf-800/80 dark:hover:bg-leaf-700"
+                  >
+                    {st.hidden ? '↩︎' : '🙈'}
+                  </button>
                   <button onClick={() => setDetail(r)} className="flex h-24 items-center justify-center">
                     <img
                       src={r.image_url || r.variations?.[0]?.image_url}

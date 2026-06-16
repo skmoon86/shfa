@@ -33,8 +33,13 @@ export function HomePage() {
       queryFn: () => nookipedia[c](),
     })),
   })
-  const itemTotal = itemQueries.reduce((sum, qr) => sum + (qr.data?.length ?? 0), 0)
-  const itemOwned = Object.values(itemMap).filter((s) => s.owned).length
+  // 숨긴 아이템은 전체·보유 카운트 모두에서 제외(아이템 페이지와 동일 기준)
+  const hiddenCount = Object.values(itemMap).filter((s) => s.hidden).length
+  const itemTotal = Math.max(
+    0,
+    itemQueries.reduce((sum, qr) => sum + (qr.data?.length ?? 0), 0) - hiddenCount,
+  )
+  const itemOwned = Object.values(itemMap).filter((s) => s.owned && !s.hidden).length
 
   return (
     <div className="space-y-6">

@@ -42,6 +42,15 @@ const LIST_PATCHES: Record<string, string[]> = {
   'nh/tools': ['yellow balloon'],
 }
 
+// 정상 목록 엔드포인트(fish/sea/items 등)는 항상 수십 개 이상을 반환한다.
+// 비정상적으로 짧은 배열은 업스트림 일시 오류로 잘린 응답으로 간주해
+// 캐시에 저장하지도, 신선 캐시로 제공하지도 않는다(7일짜리 오염 방지).
+// 단건 조회(nh/fish/<name>)는 객체를 반환하므로 이 판정에 걸리지 않는다.
+const MIN_LIST_LEN = 5
+function isDegenerateList(data: unknown): boolean {
+  return Array.isArray(data) && data.length < MIN_LIST_LEN
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
@@ -109,7 +118,8 @@ Deno.serve(async (req) => {
     cachedRow = cached ?? null
     if (cachedRow) {
       const age = Date.now() - new Date(cachedRow.fetched_at).getTime()
-      if (age < CACHE_TTL_MS) {
+      // 오염된(짧은) 캐시는 신선해도 제공하지 않고 재요청해 자가복구한다.
+      if (age < CACHE_TTL_MS && !isDegenerateList(cachedRow.data)) {
         return json(cachedRow.data, 200, { 'X-Cache': 'HIT' })
       }
     }
@@ -151,15 +161,24 @@ Deno.serve(async (req) => {
     if (attempt < 1) await sleep(800)
   }
 
-  // 3) 실패 시: 만료된 캐시라도 있으면 그것을 반환(stale-on-error)
+  // 3) 실패 시: 만료된 캐시라도 있으면 그것을 반환(stale-on-error). 단 오염 캐시는 제외.
   if (payload === null) {
-    if (cachedRow) {
+    if (cachedRow && !isDegenerateList(cachedRow.data)) {
       return json(cachedRow.data, 200, { 'X-Cache': 'STALE' })
     }
     return json(
       { error: `Nookipedia 일시 오류(${lastStatus}). 잠시 후 다시 시도하세요.` },
       503,
     )
+  }
+
+  // 3.5) 응답이 비정상적으로 짧은 리스트면(업스트림 일시 오류 추정):
+  //      정상 캐시가 있으면 그것을 반환하고, 오염 방지를 위해 저장하지 않는다.
+  if (isDegenerateList(payload)) {
+    if (cachedRow && !isDegenerateList(cachedRow.data)) {
+      return json(cachedRow.data, 200, { 'X-Cache': 'STALE-GUARD' })
+    }
+    return json(payload, 200, { 'X-Cache': 'BYPASS' })
   }
 
   // 4) 목록 누락 보정(베스트에포트): 빠진 항목을 단건 조회로 받아 병합

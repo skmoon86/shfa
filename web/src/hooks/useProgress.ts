@@ -117,10 +117,11 @@ export function useRecipeProgress() {
   return { learned: query.data ?? new Set<string>(), isLoading: query.isLoading, toggle }
 }
 
-// ── 아이템 컬렉션(보유/위시리스트) ────────────────────────
+// ── 아이템 컬렉션(보유/위시리스트/숨김) ───────────────────
 export interface ItemState {
   owned: boolean
   wishlist: boolean
+  hidden: boolean
 }
 type ItemMap = Record<string, ItemState>
 
@@ -136,11 +137,11 @@ export function useItemCollection() {
     queryFn: async (): Promise<ItemMap> => {
       const { data, error } = await supabase
         .from('item_collection')
-        .select('item_id, owned, wishlist')
+        .select('item_id, owned, wishlist, hidden')
       if (error) throw error
       const map: ItemMap = {}
       for (const r of data ?? []) {
-        map[r.item_id] = { owned: r.owned, wishlist: r.wishlist }
+        map[r.item_id] = { owned: r.owned, wishlist: r.wishlist, hidden: r.hidden }
       }
       return map
     },
@@ -150,13 +151,14 @@ export function useItemCollection() {
     mutationFn: async (args: {
       itemId: string
       category: string
-      field: 'owned' | 'wishlist'
+      field: 'owned' | 'wishlist' | 'hidden'
     }) => {
       if (!uid) throw new Error('로그인이 필요합니다.')
       const cur =
         (qc.getQueryData<ItemMap>(key) ?? {})[args.itemId] ?? {
           owned: false,
           wishlist: false,
+          hidden: false,
         }
       const next = { ...cur, [args.field]: !cur[args.field] }
       const { error } = await supabase.from('item_collection').upsert({
@@ -165,6 +167,7 @@ export function useItemCollection() {
         category: args.category,
         owned: next.owned,
         wishlist: next.wishlist,
+        hidden: next.hidden,
         updated_at: new Date().toISOString(),
       })
       if (error) throw error
