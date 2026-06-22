@@ -51,6 +51,38 @@ function isDegenerateList(data: unknown): boolean {
   return Array.isArray(data) && data.length < MIN_LIST_LEN
 }
 
+// 엔드포인트별 정상 category 값(소문자). 캐시가 다른 엔드포인트 데이터로 오염되면
+// (예: nh/clothing 캐시에 interior 데이터가 들어가 Rugs/Wallpaper/Floors가 나오는 사례)
+// category가 기대집합을 벗어나므로 감지할 수 있다. category 필드가 없는
+// items/tools/gyroids는 대상에서 제외(아래 함수가 자동으로 판정 보류).
+const EXPECTED_CATEGORIES: Record<string, Set<string>> = {
+  'nh/clothing': new Set([
+    'tops', 'bottoms', 'dress-up', 'headwear', 'accessories',
+    'socks', 'shoes', 'bags', 'umbrellas', 'other',
+  ]),
+  'nh/interior': new Set(['wallpaper', 'floors', 'rugs']),
+  'nh/furniture': new Set(['housewares', 'miscellaneous', 'wall-mounted', 'ceiling decor']),
+  'nh/photos': new Set(['photos', 'posters']),
+}
+
+// 응답 배열의 category 값이 해당 엔드포인트의 기대집합을 과반 이탈하면
+// 다른 엔드포인트 데이터로 오염된 것으로 보고 신선/저장 대상에서 제외한다.
+function isMislabeledList(endpointPath: string, data: unknown): boolean {
+  const expected = EXPECTED_CATEGORIES[endpointPath]
+  if (!expected || !Array.isArray(data) || data.length === 0) return false
+  const cats = data
+    .map((x) => String((x as { category?: string })?.category ?? '').toLowerCase().trim())
+    .filter(Boolean)
+  if (cats.length === 0) return false // category 정보가 없으면 판정 보류
+  const bad = cats.filter((c) => !expected.has(c)).length
+  return bad > cats.length / 2
+}
+
+// 짧은 응답(잘림) 또는 카테고리 불일치(다른 엔드포인트로 오염) 통합 판정.
+function isContaminated(endpointPath: string, data: unknown): boolean {
+  return isDegenerateList(data) || isMislabeledList(endpointPath, data)
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
@@ -100,6 +132,9 @@ Deno.serve(async (req) => {
     )
   }
 
+  // 오염(카테고리 불일치) 판정용 경로(쿼리 제외)
+  const endpointPath = segments.join('/')
+
   // 캐시 키 = 경로 + 정렬된 쿼리스트링
   const sortedQuery = [...url.searchParams.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
@@ -118,8 +153,8 @@ Deno.serve(async (req) => {
     cachedRow = cached ?? null
     if (cachedRow) {
       const age = Date.now() - new Date(cachedRow.fetched_at).getTime()
-      // 오염된(짧은) 캐시는 신선해도 제공하지 않고 재요청해 자가복구한다.
-      if (age < CACHE_TTL_MS && !isDegenerateList(cachedRow.data)) {
+      // 오염된(짧거나 카테고리 불일치) 캐시는 신선해도 제공하지 않고 재요청해 자가복구한다.
+      if (age < CACHE_TTL_MS && !isContaminated(endpointPath, cachedRow.data)) {
         return json(cachedRow.data, 200, { 'X-Cache': 'HIT' })
       }
     }
@@ -163,7 +198,7 @@ Deno.serve(async (req) => {
 
   // 3) 실패 시: 만료된 캐시라도 있으면 그것을 반환(stale-on-error). 단 오염 캐시는 제외.
   if (payload === null) {
-    if (cachedRow && !isDegenerateList(cachedRow.data)) {
+    if (cachedRow && !isContaminated(endpointPath, cachedRow.data)) {
       return json(cachedRow.data, 200, { 'X-Cache': 'STALE' })
     }
     return json(
@@ -172,10 +207,10 @@ Deno.serve(async (req) => {
     )
   }
 
-  // 3.5) 응답이 비정상적으로 짧은 리스트면(업스트림 일시 오류 추정):
+  // 3.5) 응답이 오염(짧거나 카테고리 불일치)이면(업스트림 일시 오류 추정):
   //      정상 캐시가 있으면 그것을 반환하고, 오염 방지를 위해 저장하지 않는다.
-  if (isDegenerateList(payload)) {
-    if (cachedRow && !isDegenerateList(cachedRow.data)) {
+  if (isContaminated(endpointPath, payload)) {
+    if (cachedRow && !isContaminated(endpointPath, cachedRow.data)) {
       return json(cachedRow.data, 200, { 'X-Cache': 'STALE-GUARD' })
     }
     return json(payload, 200, { 'X-Cache': 'BYPASS' })
