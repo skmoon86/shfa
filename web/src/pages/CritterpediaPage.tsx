@@ -30,12 +30,19 @@ function availArray(c: Critter, hemi: 'north' | 'south'): number[] {
   return arr.map(Number)
 }
 
+// 채집장소 한글 라벨(곤충=bugLocation, 그 외=fishLocation). 해산물은 location 없음.
+function tLoc(cat: DataCat, loc?: string): string {
+  return cat === 'bugs' ? tr(bugLocation, loc) : tr(fishLocation, loc)
+}
+
 export function CritterpediaPage() {
   const [selected, setSelected] = useState<Set<DataCat>>(new Set())
   const [q, setQ] = useState('')
   const [hemi, setHemi] = useState<'north' | 'south'>('north')
   const [onlyNow, setOnlyNow] = useState(false)
-  const [onlyUndonated, setOnlyUndonated] = useState(false)
+  const [donateFilter, setDonateFilter] = useState<'all' | 'donated' | 'undonated'>('all')
+  const [loc, setLoc] = useState('') // 선택된 채집장소(표시 라벨)
+  const [sortBy, setSortBy] = useState<'default' | 'name'>('default')
   const [onlyNoModel, setOnlyNoModel] = useState(false)
   const canSave = useCanSave()
   const { map, toggle } = useCritterpedia()
@@ -92,6 +99,18 @@ export function CritterpediaPage() {
   const catLabel =
     selected.size === 0 ? '전체' : [...selected].map((c) => critterCategory[c]).join(', ')
 
+  // 채집장소 드롭다운 옵션(현재 카테고리의 fish/bugs location → 표시 라벨 distinct)
+  const locOptions = useMemo(() => {
+    const set = new Set<string>()
+    for (const r of data) {
+      if (!CRITTER_CATS.includes(r.__cat)) continue
+      const label = tLoc(r.__cat, (r as Critter).location)
+      if (label) set.add(label)
+    }
+    return [...set].sort((a, b) => a.localeCompare(b, 'ko'))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allRows, [...selected].join(',')])
+
   const filtered = useMemo(() => {
     let rows = data
     if (q.trim()) {
@@ -109,7 +128,14 @@ export function CritterpediaPage() {
           : true,
       )
     }
-    if (onlyUndonated) {
+    if (loc) {
+      rows = rows.filter(
+        (r) => CRITTER_CATS.includes(r.__cat) && tLoc(r.__cat, (r as Critter).location) === loc,
+      )
+    }
+    if (donateFilter === 'donated') {
+      rows = rows.filter((r) => map[`${r.__cat}:${r.name}`]?.donated)
+    } else if (donateFilter === 'undonated') {
       rows = rows.filter((r) => !map[`${r.__cat}:${r.name}`]?.donated)
     }
     if (onlyNoModel) {
@@ -117,8 +143,11 @@ export function CritterpediaPage() {
         (r) => MODEL_CATS.includes(r.__cat) && !map[`${r.__cat}:${r.name}`]?.model,
       )
     }
+    if (sortBy === 'name') {
+      rows = [...rows].sort((a, b) => ko(a.name, a.__cat).localeCompare(ko(b.name, b.__cat), 'ko'))
+    }
     return rows
-  }, [data, q, onlyNow, onlyUndonated, onlyNoModel, hemi, currentMonth, ko, map])
+  }, [data, q, onlyNow, donateFilter, loc, sortBy, onlyNoModel, hemi, currentMonth, ko, map])
 
   const total = data.length
   const donatedCount = data.filter((r) => map[`${r.__cat}:${r.name}`]?.donated).length
@@ -176,14 +205,37 @@ export function CritterpediaPage() {
               </label>
             </>
           )}
-          <label className="flex items-center gap-1.5 text-sm">
-            <input
-              type="checkbox"
-              checked={onlyUndonated}
-              onChange={(e) => setOnlyUndonated(e.target.checked)}
-            />
-            미기증만
-          </label>
+          {locOptions.length > 0 && (
+            <select
+              value={loc}
+              onChange={(e) => setLoc(e.target.value)}
+              className="rounded-xl border border-leaf-200 bg-white px-3 py-2 text-sm dark:border-leaf-700 dark:bg-leaf-800"
+            >
+              <option value="">채집장소 전체</option>
+              {locOptions.map((l) => (
+                <option key={l} value={l}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          )}
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+            className="rounded-xl border border-leaf-200 bg-white px-3 py-2 text-sm dark:border-leaf-700 dark:bg-leaf-800"
+          >
+            <option value="default">기본 정렬</option>
+            <option value="name">가나다순</option>
+          </select>
+          <select
+            value={donateFilter}
+            onChange={(e) => setDonateFilter(e.target.value as typeof donateFilter)}
+            className="rounded-xl border border-leaf-200 bg-white px-3 py-2 text-sm dark:border-leaf-700 dark:bg-leaf-800"
+          >
+            <option value="all">기증 전체</option>
+            <option value="donated">기증만</option>
+            <option value="undonated">미기증만</option>
+          </select>
           {hasModelCats && (
             <label className="flex items-center gap-1.5 text-sm">
               <input

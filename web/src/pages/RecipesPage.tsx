@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
-import { useQuery, useQueries } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { nookipedia, type Recipe } from '../lib/nookipedia'
-import type { DetailItem } from '../components/ItemDetailModal'
 import { useRecipeProgress } from '../hooks/useProgress'
+import { useItemsStore } from '../hooks/useItemsStore'
 import { useKoNames } from '../hooks/useKoNames'
 import { useCanSave, ToggleButton } from '../components/Toggle'
 import { Spinner, ErrorState, EmptyState } from '../components/states'
@@ -13,19 +13,20 @@ import { RecipeDetailModal } from '../components/RecipeDetailModal'
 import { ui, tSource } from '../i18n/ko'
 import { fmtBells } from '../lib/format'
 
-// 레시피로 제작되는 결과물 아이템을 이름으로 찾기 위해 조회하는 카테고리
-type DataCat = 'furniture' | 'interior' | 'tools' | 'items' | 'photos' | 'gyroids'
-const ITEM_CATS: DataCat[] = ['furniture', 'interior', 'tools', 'items', 'photos', 'gyroids']
-
-// 레시피 대분류(가구/벽걸이·천장/벽지·바닥·러그/도구/설비/요리/잡화)
+// 레시피 카테고리 = 제작 결과 아이템의 버킷(itemBuckets). 단 도구 엔드포인트 산출물은 '도구'로 분리.
+// 음악/토용은 제작 불가 → 탭 없음. 매칭 안 되는 레시피는 '기타'.
 const RECIPE_CATS: { code: string; label: string }[] = [
   { code: 'furniture', label: '가구' },
-  { code: 'wall', label: '벽걸이·천장' },
-  { code: 'interior', label: '벽지·바닥·러그' },
-  { code: 'tools', label: '도구' },
-  { code: 'equipment', label: '설비' },
-  { code: 'food', label: '요리' },
   { code: 'misc', label: '잡화' },
+  { code: 'wallmount', label: '벽걸이·천장' },
+  { code: 'structures', label: '내부구조' },
+  { code: 'interior', label: '벽지·바닥·러그' },
+  { code: 'clothing', label: '의류' },
+  { code: 'accessories', label: '액세서리' },
+  { code: 'bagshat', label: '가방·모자·신발·우산' },
+  { code: 'food', label: '음식' },
+  { code: 'tools', label: '도구' },
+  { code: 'other', label: '기타' },
 ]
 
 export function RecipesPage() {
@@ -39,7 +40,7 @@ export function RecipesPage() {
   const { learned, toggle } = useRecipeProgress()
   const ko = useKoNames('recipes')
   const koItem = useKoNames('items')
-  const catOf = useKoNames('recipe-cats') // 레시피명 → 대분류 코드
+  const store = useItemsStore()
 
   const query = useQuery({
     queryKey: ['nook', 'recipes'],
@@ -47,27 +48,27 @@ export function RecipesPage() {
   })
   const data = query.data ?? []
 
-  // 상세 카드를 열 때만 결과물 아이템 데이터를 로드(아이템 페이지와 캐시 공유)
-  const itemQueries = useQueries({
-    queries: ITEM_CATS.map((c) => ({
-      queryKey: ['nook', c],
-      queryFn: () => nookipedia[c]() as Promise<DetailItem[]>,
-      enabled: !!detail,
-    })),
-  })
-  // 레시피 이름 → 제작 결과 아이템(이름 일치, 대소문자 무시)
-  const craftedItem = useMemo<DetailItem | null>(() => {
+  // 레시피명 → 대분류 코드(제작 결과 아이템 버킷; 도구 엔드포인트 산출물은 '도구', 음악/토용은 '기타')
+  const recipeCatOf = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const r of store.rows) {
+      const code =
+        r.__cat === 'tools'
+          ? 'tools'
+          : r.__bucket === 'music' || r.__bucket === 'gyroids'
+            ? 'other'
+            : r.__bucket
+      m.set(r.name.toLowerCase().trim(), code)
+    }
+    return (name: string) => m.get(name.toLowerCase().trim()) ?? 'other'
+  }, [store.rows])
+
+  // 레시피 이름 → 제작 결과 아이템(통합 스토어에서 이름 일치, 아이템 페이지와 캐시 공유)
+  const craftedItem = useMemo(() => {
     if (!detail) return null
     const key = detail.name.toLowerCase().trim()
-    for (const qr of itemQueries) {
-      const hit = (qr.data as DetailItem[] | undefined)?.find(
-        (it) => it.name.toLowerCase().trim() === key,
-      )
-      if (hit) return hit
-    }
-    return null
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [detail, itemQueries.map((qr) => qr.data).join(',')])
+    return store.rows.find((r) => r.name.toLowerCase().trim() === key) ?? null
+  }, [detail, store.rows])
 
   // 입수처 목록
   const sources = useMemo(() => {
@@ -88,7 +89,7 @@ export function RecipesPage() {
       rows = rows.filter((r) => (r.availability ?? []).some((a) => a.from === source))
     }
     if (rcats.size) {
-      rows = rows.filter((r) => rcats.has(catOf(r.name)))
+      rows = rows.filter((r) => rcats.has(recipeCatOf(r.name)))
     }
     if (learnFilter === 'learned') rows = rows.filter((r) => learned.has(r.name))
     else if (learnFilter === 'unlearned') rows = rows.filter((r) => !learned.has(r.name))
@@ -96,7 +97,7 @@ export function RecipesPage() {
       rows = [...rows].sort((a, b) => ko(a.name).localeCompare(ko(b.name), 'ko'))
     }
     return rows
-  }, [data, q, source, rcats, learnFilter, learned, ko, catOf, sortBy])
+  }, [data, q, source, rcats, learnFilter, learned, ko, recipeCatOf, sortBy])
 
   const toggleCat = (c: string) =>
     setRcats((prev) => {

@@ -297,47 +297,108 @@ export function tPersonality(p?: string): string {
   return personality[p] ?? p
 }
 
-// 이벤트(/nh/events 의 event 필드) 한국어. 북반구 기준 행사명.
-export const eventLabel: Record<string, string> = {
-  "New Year's Day": '새해',
-  "New Year's Eve": '섣달그믐(카운트다운)',
-  'Festivale': '페스티벌',
-  'Bunny Day': '부활절',
-  'Nature Day': '자연의 날',
-  'May Day': '메이데이',
-  'International Museum Day': '국제 박물관의 날',
-  'Wedding Season': '웨딩 시즌',
-  "Mother's Day": '어머니의 날',
-  "Father's Day": '아버지의 날',
-  'Fishing Tourney': '낚시 대회',
-  'Bug-Off': '곤충 채집 대회',
-  'Bug Off': '곤충 채집 대회',
-  'Fireworks Show': '불꽃놀이',
-  'Summer Solstice': '하지',
-  'Winter Solstice': '동지',
-  'Halloween': '핼러윈',
-  'Turkey Day': '추수감사절',
-  'Toy Day': '토이데이',
-  'Festival of Lights': '빛의 축제',
-  'Countdown': '카운트다운',
-  "Earth Day": '지구의 날',
-  'Harvest Festival': '추수 축제',
-  'Sports Fair': '스포츠 페어',
-  'Mushrooming Season': '버섯 시즌',
-  'Maple Leaf Season': '단풍 시즌',
-  'Cherry-Blossom Season': '벚꽃 시즌',
-  'Snowflake Season': '눈송이 시즌',
-  'Seollal': '설날',
-  'Lunar New Year': '설날',
+// 이벤트(/nh/events 의 event 필드) 한국어화.
+// 생일("<주민> 생일")은 주민 데이터에서 별도 처리하므로 tEvent는 ''(건너뜀)를 반환.
+// 반구 표기·깨진 유니코드 제거 + 패턴(시작/종료·레시피 시즌·계절) 처리.
+// 알 수 없는 minor 이벤트와 노이즈(개화/쇼핑 시즌 경계 등)는 ''로 숨겨 영문 노출을 방지한다.
+
+// 주요 행사 키워드(부분 일치, 소문자 기준). 위가 우선.
+const EVENT_TERMS: [RegExp, string][] = [
+  [/bunny day/, '부활절'],
+  [/festivale/, '페스티벌'],
+  [/turkey day/, '추수감사절'],
+  [/toy day/, '토이데이'],
+  [/halloween/, '핼러윈'],
+  [/valentine/, '발렌타인데이'],
+  [/wedding season/, '웨딩 시즌'],
+  [/may day/, '메이데이'],
+  [/fishing tourney/, '낚시 대회'],
+  [/bug-?off/, '곤충 채집 대회'],
+  [/fireworks show/, '불꽃놀이'],
+  [/international museum day/, '국제 박물관의 날'],
+  [/museum day/, '박물관의 날'],
+  [/nature day/, '자연의 날'],
+  [/earth day/, '지구의 날'],
+  [/mother'?s day/, '어머니의 날'],
+  [/father'?s day/, '아버지의 날'],
+  [/children'?s day/, '어린이날'],
+  [/april fools'? day/, '만우절'],
+  [/shamrock day/, '샴록 데이'],
+  [/day of the dead/, '망자의 날'],
+  [/new year'?s eve/, '섣달그믐'],
+  [/new year'?s day/, '새해'],
+  [/lunar new year|seollal|spring festival/, '설날'],
+  [/countdown/, '카운트다운'],
+  [/music festival/, '뮤직 페스티벌'],
+  [/festive (shopping )?season/, '연말 시즌'],
+  [/cherry.?blossom/, '벚꽃 시즌'],
+  [/maple leaf/, '단풍 시즌'],
+  [/mushroom/, '버섯 시즌'],
+  [/snowflake/, '눈송이 시즌'],
+]
+
+// 레시피 시즌 재료 한글
+const SEASON_MATERIAL: [RegExp, string][] = [
+  [/cherry.?blossom/, '벚꽃'],
+  [/young spring bamboo/, '봄 죽순'],
+  [/summer shell/, '여름 조개'],
+  [/maple leaf/, '단풍'],
+  [/acorn|pine cone/, '도토리·솔방울'],
+  [/mushroom/, '버섯'],
+  [/snowflake/, '눈송이'],
+  [/ornament/, '오너먼트'],
+]
+
+const SEASON_WORD: Record<string, string> = {
+  spring: '봄', summer: '여름', fall: '가을', winter: '겨울',
 }
-export function tEvent(name?: string): string {
-  if (!name) return ''
-  if (eventLabel[name]) return eventLabel[name]
-  const lower = name.toLowerCase()
-  const hit = Object.keys(eventLabel).find((k) => k.toLowerCase() === lower)
-  if (hit) return eventLabel[hit]
-  // "<주민> Birthday" → "<주민> 생일"
-  const bm = /^(.+?)'s birthday$/i.exec(name)
-  if (bm) return `${bm[1]} 생일`
-  return name
+
+function matchTerm(terms: [RegExp, string][], s: string): string | null {
+  for (const [re, ko] of terms) if (re.test(s)) return ko
+  return null
+}
+
+// 이벤트의 반구 표기(필터용). 없으면 null(양 반구 공통).
+export function eventHemisphere(name: string): 'north' | 'south' | null {
+  if (/northern hemisphere/i.test(name)) return 'north'
+  if (/southern hemisphere/i.test(name)) return 'south'
+  return null
+}
+
+export function tEvent(nameRaw?: string): string {
+  if (!nameRaw) return ''
+  // 깨진 유니코드(서로게이트) 제거
+  let s = nameRaw.replace(/[\uD800-\uDFFF]/g, '').trim()
+  if (!s) return ''
+  // 반구 표기 제거(필터는 eventHemisphere)
+  s = s.replace(/\s*\((?:northern|southern) hemisphere\)/i, '').trim()
+  const lower = s.toLowerCase()
+  // 생일은 별도 처리 → 건너뜀
+  if (/'s birthday$/.test(lower)) return ''
+  // 노이즈 숨김(개화·쇼핑 시즌 경계·솔스티스·폭설)
+  if (/bushes (start|end) blooming|shopping season|solstice|heavy snowstorm/.test(lower)) return ''
+  // 레시피 시즌 시작/마지막
+  let m: RegExpExecArray | null
+  if ((m = /^last day (.*?) recipes are available$/.exec(lower))) {
+    return `${matchTerm(SEASON_MATERIAL, m[1]) ?? m[1]} 레시피 마지막 날`
+  }
+  if ((m = /^(.*?) recipes become available$/.exec(lower))) {
+    return `${matchTerm(SEASON_MATERIAL, m[1]) ?? m[1]} 레시피 시작`
+  }
+  // 계절 시작/마지막
+  if ((m = /^(first|last) day of (?:the )?(spring|summer|fall|winter)\b/.exec(lower))) {
+    return `${SEASON_WORD[m[2]]} ${m[1] === 'first' ? '시작' : '마지막 날'}`
+  }
+  // 시작/종료 suffix 분리
+  let suffix = ''
+  let core = lower
+  if ((m = /^(.*?) (?:nook shopping event|able sisters event|event) (begins?|ends?)$/.exec(lower))) {
+    core = m[1]; suffix = m[2].startsWith('begin') ? ' 시작' : ' 종료'
+  } else if ((m = /^(.*?) (begins?|ends?)$/.exec(lower))) {
+    core = m[1]; suffix = m[2].startsWith('begin') ? ' 시작' : ' 종료'
+  }
+  const term = matchTerm(EVENT_TERMS, core)
+  if (term) return term + suffix
+  // 알 수 없는 minor 이벤트는 숨김(영문 노출 방지)
+  return ''
 }

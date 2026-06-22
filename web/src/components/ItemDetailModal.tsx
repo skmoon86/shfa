@@ -8,6 +8,7 @@ import {
   theme as themeKo,
   color as colorKo,
 } from '../i18n/terms'
+import { bucketLabel, type Bucket } from '../lib/itemBuckets'
 import { fmtBells, fmtBuy, buyDetail } from '../lib/format'
 import { Sheet } from './Sheet'
 
@@ -16,6 +17,7 @@ export interface DetailItem {
   name: string
   image_url?: string
   category?: string
+  __bucket?: Bucket // 앱 카테고리(12버킷). ItemsPage에서 전달.
   buy?: PriceEntry[]
   sell?: number
   availability?: Availability[]
@@ -57,11 +59,16 @@ export function ItemDetailModal({
             )}
             <div>
               <h2 className="text-lg font-bold">{title || item.name}</h2>
-              {item.category && (
-                <span className="text-xs text-leaf-400">
-                  {tr(itemCategoryName, item.category)}
-                </span>
-              )}
+              <div className="mt-0.5 flex items-center gap-1.5">
+                {item.__bucket && (
+                  <span className="chip text-[10px]">{bucketLabel[item.__bucket]}</span>
+                )}
+                {item.category && (
+                  <span className="text-xs text-leaf-400">
+                    {tr(itemCategoryName, item.category)}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <button onClick={onClose} className="btn-ghost">

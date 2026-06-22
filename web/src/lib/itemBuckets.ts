@@ -34,6 +34,67 @@ export const bucketLabel: Record<Bucket, string> = {
   other: '기타',
 }
 
+// 이벤트 분류(availability.note + 일부 from 기반). 획득방법 드롭다운을 대체.
+export type EventKey =
+  | 'bunny' | 'festivale' | 'turkey' | 'toyday' | 'halloween' | 'valentine'
+  | 'wedding' | 'mayday' | 'fishing' | 'bugoff' | 'fireworks' | 'museum'
+  | 'countdown' | 'musicfest'
+  | 'mushroom' | 'cherry' | 'maple'
+  | 'sanrio' | 'mario' | 'zelda' | 'splatoon' | 'lego' | 'pocketcamp'
+  | 'celeste' | 'gullivarrr' | 'pascal' | 'hotel'
+  | 'spring' | 'summer' | 'fall' | 'winter' | 'seasonal'
+  | 'etc'
+
+// 우선순위 = 매칭 순서(위가 우선). 명절·행사 > 자연 시즌 > 콜라보 > NPC/특수 > 계절 > 기타.
+const EVENT_RULES: [Exclude<EventKey, 'etc'>, RegExp][] = [
+  ['bunny', /bunny day/],
+  ['festivale', /festivale/],
+  ['turkey', /turkey day/],
+  ['toyday', /toy day/],
+  ['halloween', /halloween/],
+  ['valentine', /valentine/],
+  ['wedding', /wedding/],
+  ['mayday', /may day/],
+  ['fishing', /fishing tourney/],
+  ['bugoff', /bug-?off/],
+  ['fireworks', /fireworks/],
+  ['museum', /museum day/],
+  ['countdown', /countdown/],
+  ['musicfest', /music festival/],
+  ['mushroom', /mushroom/],
+  ['cherry', /cherry.?blossom/],
+  ['maple', /maple leaf/],
+  ['sanrio', /sanrio/],
+  ['mario', /mario/],
+  ['zelda', /zelda/],
+  ['splatoon', /splatoon/],
+  ['lego', /lego/],
+  ['pocketcamp', /pocket camp/],
+  ['celeste', /celeste|meteor shower|zodiac/],
+  ['gullivarrr', /gullivarrr/],
+  ['pascal', /pascal/],
+  ['hotel', /hotel souvenir/],
+  ['spring', /\bspring\b/],
+  ['summer', /\bsummer\b/],
+  ['fall', /\bfall\b/],
+  ['winter', /\bwinter\b/],
+  ['seasonal', /\bseasonal\b/],
+]
+
+// 드롭다운 노출 순서(고정 논리 순서) + 라벨
+export const EVENT_ORDER: EventKey[] = [...EVENT_RULES.map(([k]) => k), 'etc']
+export const itemEventLabel: Record<EventKey, string> = {
+  bunny: '부활절', festivale: '페스티벌', turkey: '추수감사절', toyday: '토이데이',
+  halloween: '핼러윈', valentine: '발렌타인데이', wedding: '웨딩 시즌', mayday: '메이데이',
+  fishing: '낚시 대회', bugoff: '곤충 채집 대회', fireworks: '불꽃놀이', museum: '국제 박물관의 날',
+  countdown: '카운트다운', musicfest: '뮤직 페스티벌',
+  mushroom: '버섯 시즌', cherry: '벚꽃 시즌', maple: '단풍 시즌',
+  sanrio: '산리오', mario: '마리오', zelda: '젤다', splatoon: '스플래툰', lego: '레고', pocketcamp: '포켓캠프',
+  celeste: '부옥이 별똥별', gullivarrr: '해적 죠니', pascal: '해탈한', hotel: '호텔 기념품',
+  spring: '봄', summer: '여름', fall: '가을', winter: '겨울', seasonal: '시즌',
+  etc: '기타',
+}
+
 // 음악 데이터맵(music.json) 한 행
 export interface MusicEntry {
   ko: string
@@ -73,10 +134,14 @@ export interface ItemRow {
   __reformable: boolean
   __hasRecipe: boolean
   __catalogable: boolean
+  __event: EventKey
 }
 
 // finalize 입력: 플래그를 제외한 행(원본 엔드포인트의 여분 필드는 런타임에 보존됨)
-type RawRow = Omit<ItemRow, '__hasVariation' | '__reformable' | '__hasRecipe' | '__catalogable'>
+type RawRow = Omit<
+  ItemRow,
+  '__hasVariation' | '__reformable' | '__hasRecipe' | '__catalogable' | '__event'
+>
 
 export interface ClassifyInput {
   furniture: Furniture[]
@@ -114,6 +179,19 @@ function inCatalog(row: { availability?: Availability[]; buy?: PriceEntry[] }): 
   )
 }
 
+// availability.note(+from)를 모아 위키 마크업 제거 후 우선순위 키워드로 이벤트 판정.
+function eventOf(row: { availability?: Availability[] }): EventKey {
+  const parts: string[] = []
+  for (const a of row.availability ?? []) {
+    if (a.from) parts.push(a.from)
+    if (a.note) parts.push(a.note)
+  }
+  if (parts.length === 0) return 'etc'
+  const text = parts.join(' | ').toLowerCase().replace(/\[\[|\]\]/g, '')
+  for (const [key, re] of EVENT_RULES) if (re.test(text)) return key
+  return 'etc'
+}
+
 export function classify(input: ClassifyInput): ClassifyResult {
   const { furniture, clothing, interior, items, tools, gyroids, music, art, recipes, structureNames } = input
 
@@ -131,6 +209,7 @@ export function classify(input: ClassifyInput): ClassifyResult {
     __reformable: row.customizable === true,
     __hasRecipe: recipeNames.has(norm(row.name)),
     __catalogable: inCatalog(row),
+    __event: eventOf(row),
   })
 
   // ── 가구 ──

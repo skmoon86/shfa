@@ -8,7 +8,10 @@ import { SearchBar } from '../components/SearchBar'
 import { CategoryTabs } from '../components/CategoryTabs'
 import { ProgressBar } from '../components/ProgressBar'
 import { ItemDetailModal } from '../components/ItemDetailModal'
-import { BUCKET_ORDER, bucketLabel, type Bucket, type ItemRow } from '../lib/itemBuckets'
+import {
+  BUCKET_ORDER, bucketLabel, EVENT_ORDER, itemEventLabel,
+  type Bucket, type ItemRow, type EventKey,
+} from '../lib/itemBuckets'
 import { ui, tSource } from '../i18n/ko'
 import { fmtBells, fmtBuy } from '../lib/format'
 
@@ -16,13 +19,25 @@ const KO_CATS = ['furniture', 'clothing', 'interior', 'items', 'tools', 'gyroids
 const TABS = BUCKET_ORDER.map((b) => ({ code: b, label: bucketLabel[b] }))
 const PAGE = 60
 
-type Check = 'owned' | 'reform' | 'catalog' | 'recipe' | 'variation' | 'unowned' | 'wishlist' | 'hidden'
+type Check =
+  | 'owned' | 'unowned' | 'wishlist' | 'hidden'
+  | 'reformO' | 'reformX' | 'catalogO' | 'catalogX'
+  | 'recipeO' | 'recipeX' | 'variationO' | 'variationX'
+
+// 같은 속성의 O/X(및 보유/미보유)는 상호배타 — 하나 선택 시 다른 쪽 해제
+const EXCLUSIVE: Partial<Record<Check, Check>> = {
+  owned: 'unowned', unowned: 'owned',
+  reformO: 'reformX', reformX: 'reformO',
+  catalogO: 'catalogX', catalogX: 'catalogO',
+  recipeO: 'recipeX', recipeX: 'recipeO',
+  variationO: 'variationX', variationX: 'variationO',
+}
 
 export function ItemsPage() {
   const [selected, setSelected] = useState<Set<Bucket>>(new Set())
   const [q, setQ] = useState('')
   const [limit, setLimit] = useState(PAGE)
-  const [acq, setAcq] = useState('') // 선택된 획득방법(원문 from)
+  const [event, setEvent] = useState<EventKey | ''>('') // 선택된 이벤트
   const [sortBy, setSortBy] = useState<'default' | 'name'>('default')
   const [checks, setChecks] = useState<Set<Check>>(new Set())
   const [detail, setDetail] = useState<ItemRow | null>(null)
@@ -36,7 +51,13 @@ export function ItemsPage() {
   const toggleCheck = (c: Check) =>
     setChecks((prev) => {
       const next = new Set(prev)
-      next.has(c) ? next.delete(c) : next.add(c)
+      if (next.has(c)) {
+        next.delete(c)
+      } else {
+        next.add(c)
+        const ex = EXCLUSIVE[c]
+        if (ex) next.delete(ex)
+      }
       return next
     })
 
@@ -47,11 +68,11 @@ export function ItemsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store.rows, [...selected].join(',')])
 
-  // 획득방법 드롭다운 옵션(현재 버킷의 고유 from)
-  const acqOptions = useMemo(() => {
-    const set = new Set<string>()
-    for (const r of bucketRows) for (const a of r.availability ?? []) if (a.from) set.add(a.from)
-    return [...set].sort((a, b) => tSource(a).localeCompare(tSource(b), 'ko'))
+  // 이벤트 드롭다운 옵션(현재 버킷에 실제 존재하는 이벤트만, 고정 논리 순서)
+  const eventOptions = useMemo(() => {
+    const present = new Set<EventKey>()
+    for (const r of bucketRows) present.add(r.__event)
+    return EVENT_ORDER.filter((e) => present.has(e))
   }, [bucketRows])
 
   const map = store.itemMap
@@ -65,17 +86,21 @@ export function ItemsPage() {
       const l = q.trim().toLowerCase()
       rows = rows.filter((r) => r.name.toLowerCase().includes(l) || itemKo(r).toLowerCase().includes(l))
     }
-    if (acq) rows = rows.filter((r) => (r.availability ?? []).some((a) => a.from === acq))
-    if (has('reform')) rows = rows.filter((r) => r.__reformable)
-    if (has('catalog')) rows = rows.filter((r) => r.__catalogable)
-    if (has('recipe')) rows = rows.filter((r) => r.__hasRecipe)
-    if (has('variation')) rows = rows.filter((r) => r.__hasVariation)
+    if (event) rows = rows.filter((r) => r.__event === event)
+    if (has('reformO')) rows = rows.filter((r) => r.__reformable)
+    if (has('reformX')) rows = rows.filter((r) => !r.__reformable)
+    if (has('catalogO')) rows = rows.filter((r) => r.__catalogable)
+    if (has('catalogX')) rows = rows.filter((r) => !r.__catalogable)
+    if (has('recipeO')) rows = rows.filter((r) => r.__hasRecipe)
+    if (has('recipeX')) rows = rows.filter((r) => !r.__hasRecipe)
+    if (has('variationO')) rows = rows.filter((r) => r.__hasVariation)
+    if (has('variationX')) rows = rows.filter((r) => !r.__hasVariation)
     if (has('owned')) rows = rows.filter((r) => map[r.name]?.owned)
     if (has('unowned')) rows = rows.filter((r) => !map[r.name]?.owned)
     if (has('wishlist')) rows = rows.filter((r) => map[r.name]?.wishlist)
     return rows
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bucketRows, q, acq, [...checks].join(','), map, ko])
+  }, [bucketRows, q, event, [...checks].join(','), map, ko])
 
   const sorted = useMemo(() => {
     if (sortBy !== 'name') return filtered
@@ -100,12 +125,12 @@ export function ItemsPage() {
             return next
           })
           setLimit(PAGE)
-          setAcq('')
+          setEvent('')
         }}
         onClear={() => {
           setSelected(new Set())
           setLimit(PAGE)
-          setAcq('')
+          setEvent('')
         }}
       />
 
@@ -114,14 +139,14 @@ export function ItemsPage() {
         <div className="flex flex-wrap items-center gap-3">
           <SearchBar value={q} onChange={setQ} />
           <select
-            value={acq}
-            onChange={(e) => setAcq(e.target.value)}
+            value={event}
+            onChange={(e) => setEvent(e.target.value as EventKey | '')}
             className="rounded-xl border border-leaf-200 bg-white px-3 py-2 text-sm dark:border-leaf-700 dark:bg-leaf-800"
           >
-            <option value="">획득방법 전체</option>
-            {acqOptions.map((a) => (
-              <option key={a} value={a}>
-                {tSource(a)}
+            <option value="">이벤트 전체</option>
+            {eventOptions.map((e) => (
+              <option key={e} value={e}>
+                {itemEventLabel[e]}
               </option>
             ))}
           </select>
@@ -139,16 +164,31 @@ export function ItemsPage() {
             ['owned', ui.owned],
             ['unowned', '미보유'],
             ['wishlist', ui.wishlist],
-            ['reform', ui.reformable],
-            ['catalog', '카탈로그'],
-            ['recipe', '레시피 있음'],
-            ['variation', '변형 있음'],
             ['hidden', '숨김'],
           ] as [Check, string][]).map(([c, label]) => (
             <label key={c} className="flex items-center gap-1.5">
               <input type="checkbox" checked={has(c)} onChange={() => toggleCheck(c)} />
               {label}
             </label>
+          ))}
+        </div>
+        {/* 리폼/카탈로그/레시피/변형 — 각각 O·X (같은 속성 O/X 상호배타) */}
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm">
+          {([
+            ['리폼', 'reformO', 'reformX'],
+            ['카탈로그', 'catalogO', 'catalogX'],
+            ['레시피', 'recipeO', 'recipeX'],
+            ['변형', 'variationO', 'variationX'],
+          ] as [string, Check, Check][]).map(([label, o, x]) => (
+            <span key={label} className="inline-flex items-center gap-1.5">
+              <span className="text-leaf-400">{label}</span>
+              <label className="flex items-center gap-0.5">
+                <input type="checkbox" checked={has(o)} onChange={() => toggleCheck(o)} />O
+              </label>
+              <label className="flex items-center gap-0.5">
+                <input type="checkbox" checked={has(x)} onChange={() => toggleCheck(x)} />X
+              </label>
+            </span>
           ))}
         </div>
       </div>

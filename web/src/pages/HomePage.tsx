@@ -5,14 +5,15 @@ import { useAuth } from '../context/AuthContext'
 import { useCritterpedia, useRecipeProgress } from '../hooks/useProgress'
 import { useItemsStore } from '../hooks/useItemsStore'
 import { useVillagerState } from '../hooks/useVillagerState'
-import { useEvents, eventsOn } from '../hooks/useEvents'
+import { useEvents } from '../hooks/useEvents'
+import { useUserPrefs } from '../hooks/useUserPrefs'
 import { useSelectedDate } from '../context/DateContext'
 import { useKoNames } from '../hooks/useKoNames'
 import { ProgressBar } from '../components/ProgressBar'
 import { DatePicker } from '../components/DatePicker'
 import { TodoList } from '../components/TodoList'
 import { VillagerDetailModal } from '../components/VillagerDetailModal'
-import { critterCategory, tEvent, ui } from '../i18n/ko'
+import { critterCategory, tEvent, eventHemisphere, ui } from '../i18n/ko'
 import { tr, species as speciesKo } from '../i18n/terms'
 
 const CRITTER_CATS = ['fish', 'bugs', 'sea', 'fossils', 'art'] as const
@@ -28,6 +29,7 @@ export function HomePage() {
   const { learned } = useRecipeProgress()
   const store = useItemsStore()
   const { map: vmap } = useVillagerState()
+  const { prefs } = useUserPrefs()
   const { data: events } = useEvents(date.getFullYear())
   const koV = useKoNames('villagers')
   const [detail, setDetail] = useState<Villager | null>(null)
@@ -47,21 +49,36 @@ export function HomePage() {
   })[0]
 
   const itemRate = store.rate(store.rows)
-  const todayEvents = eventsOn(events, iso)
+  // 선택일 이벤트(생일·노이즈 제외, 한글화, 반구 필터)
+  const todayEvents = useMemo(
+    () =>
+      (events ?? [])
+        .filter((e) => e.date === iso)
+        .filter((e) => {
+          const h = eventHemisphere(e.event)
+          return !h || h === prefs.hemisphere
+        })
+        .map((e) => tEvent(e.event))
+        .filter(Boolean),
+    [events, iso, prefs.hemisphere],
+  )
 
   // 거주 주민
   const residents = useMemo(
     () => (villagersQ.data ?? []).filter((v) => vmap[v.name]?.resident),
     [villagersQ.data, vmap],
   )
-  // 선택일 생일 주민(거주 우선 표시는 전체 대상으로 계산)
+  // 선택일 생일 — 우리 섬 거주 주민만
   const monthName = MONTHS[date.getMonth()]
   const birthdays = useMemo(
     () =>
       (villagersQ.data ?? []).filter(
-        (v) => v.birthday_month === monthName && Number(v.birthday_day) === date.getDate(),
+        (v) =>
+          vmap[v.name]?.resident &&
+          v.birthday_month === monthName &&
+          Number(v.birthday_day) === date.getDate(),
       ),
-    [villagersQ.data, monthName, date],
+    [villagersQ.data, vmap, monthName, date],
   )
 
   return (
@@ -71,8 +88,8 @@ export function HomePage() {
         <DatePicker />
         <div className="flex flex-wrap gap-2 text-sm">
           {todayEvents.length > 0 ? (
-            todayEvents.map((e, i) => (
-              <span key={i} className="chip">🎉 {tEvent(e.event)}</span>
+            todayEvents.map((label, i) => (
+              <span key={i} className="chip">🎉 {label}</span>
             ))
           ) : (
             <span className="text-leaf-400">오늘은 특별한 이벤트가 없어요.</span>
