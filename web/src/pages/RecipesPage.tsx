@@ -32,7 +32,7 @@ export function RecipesPage() {
   const [q, setQ] = useState('')
   const [source, setSource] = useState<string>('')
   const [rcats, setRcats] = useState<Set<string>>(new Set())
-  const [onlyTodo, setOnlyTodo] = useState(false)
+  const [learnFilter, setLearnFilter] = useState<'all' | 'learned' | 'unlearned'>('all')
   const [sortBy, setSortBy] = useState<'default' | 'name'>('default')
   const [detail, setDetail] = useState<Recipe | null>(null)
   const canSave = useCanSave()
@@ -90,12 +90,13 @@ export function RecipesPage() {
     if (rcats.size) {
       rows = rows.filter((r) => rcats.has(catOf(r.name)))
     }
-    if (onlyTodo) rows = rows.filter((r) => !learned.has(r.name))
+    if (learnFilter === 'learned') rows = rows.filter((r) => learned.has(r.name))
+    else if (learnFilter === 'unlearned') rows = rows.filter((r) => !learned.has(r.name))
     if (sortBy === 'name') {
       rows = [...rows].sort((a, b) => ko(a.name).localeCompare(ko(b.name), 'ko'))
     }
     return rows
-  }, [data, q, source, rcats, onlyTodo, learned, ko, catOf, sortBy])
+  }, [data, q, source, rcats, learnFilter, learned, ko, catOf, sortBy])
 
   const toggleCat = (c: string) =>
     setRcats((prev) => {
@@ -143,14 +144,15 @@ export function RecipesPage() {
             <option value="default">기본 정렬</option>
             <option value="name">가나다순</option>
           </select>
-          <label className="flex items-center gap-1.5 text-sm">
-            <input
-              type="checkbox"
-              checked={onlyTodo}
-              onChange={(e) => setOnlyTodo(e.target.checked)}
-            />
-            미습득만
-          </label>
+          <select
+            value={learnFilter}
+            onChange={(e) => setLearnFilter(e.target.value as typeof learnFilter)}
+            className="rounded-xl border border-leaf-200 bg-white px-3 py-2 text-sm dark:border-leaf-700 dark:bg-leaf-800"
+          >
+            <option value="all">학습 전체</option>
+            <option value="learned">학습만</option>
+            <option value="unlearned">미학습만</option>
+          </select>
         </div>
         {!canSave && <p className="text-xs text-leaf-400">{ui.loginRequiredToSave}</p>}
       </div>

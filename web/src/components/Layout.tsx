@@ -5,6 +5,7 @@ import { nav, ui } from '../i18n/ko'
 
 const links = [
   { to: '/', label: nav.home, emoji: '🏠', end: true },
+  { to: '/calendar', label: nav.calendar, emoji: '📅' },
   { to: '/critterpedia', label: nav.critterpedia, emoji: '🐟' },
   { to: '/items', label: nav.items, emoji: '🪑' },
   { to: '/recipes', label: nav.recipes, emoji: '🔨' },

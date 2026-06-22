@@ -1,55 +1,85 @@
-import { Link } from 'react-router-dom'
-import { useQueries, useQuery } from '@tanstack/react-query'
-import { nookipedia } from '../lib/nookipedia'
+import { useMemo, useState } from 'react'
+import { useQueries } from '@tanstack/react-query'
+import { nookipedia, type Critter, type Fossil, type Art, type Villager } from '../lib/nookipedia'
 import { useAuth } from '../context/AuthContext'
-import { useCritterpedia, useItemCollection, useRecipeProgress } from '../hooks/useProgress'
+import { useCritterpedia, useRecipeProgress } from '../hooks/useProgress'
+import { useItemsStore } from '../hooks/useItemsStore'
+import { useVillagerState } from '../hooks/useVillagerState'
+import { useEvents, eventsOn } from '../hooks/useEvents'
+import { useSelectedDate } from '../context/DateContext'
+import { useKoNames } from '../hooks/useKoNames'
 import { ProgressBar } from '../components/ProgressBar'
-import { critterCategory, nav, ui } from '../i18n/ko'
+import { DatePicker } from '../components/DatePicker'
+import { TodoList } from '../components/TodoList'
+import { VillagerDetailModal } from '../components/VillagerDetailModal'
+import { critterCategory, tEvent, ui } from '../i18n/ko'
+import { tr, species as speciesKo } from '../i18n/terms'
 
 const CRITTER_CATS = ['fish', 'bugs', 'sea', 'fossils', 'art'] as const
-const ITEM_CATS = ['furniture', 'clothing', 'interior', 'tools', 'items', 'photos', 'gyroids'] as const
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
 
 export function HomePage() {
   const { user, signInWithGoogle } = useAuth()
+  const { date, iso } = useSelectedDate()
   const { map } = useCritterpedia()
   const { learned } = useRecipeProgress()
-  const { map: itemMap } = useItemCollection()
+  const store = useItemsStore()
+  const { map: vmap } = useVillagerState()
+  const { data: events } = useEvents(date.getFullYear())
+  const koV = useKoNames('villagers')
+  const [detail, setDetail] = useState<Villager | null>(null)
 
   const critterQueries = useQueries({
     queries: CRITTER_CATS.map((c) => ({
       queryKey: ['nook', c],
-      queryFn: () =>
-        c === 'fossils'
-          ? nookipedia.fossils()
-          : c === 'art'
-            ? nookipedia.art()
-            : nookipedia[c](),
+      queryFn: (): Promise<(Critter | Fossil | Art)[]> =>
+        c === 'fossils' ? nookipedia.fossils() : c === 'art' ? nookipedia.art() : nookipedia[c](),
     })),
   })
-  const recipesQ = useQuery({ queryKey: ['nook', 'recipes'], queryFn: () => nookipedia.recipes() })
-  const itemQueries = useQueries({
-    queries: ITEM_CATS.map((c) => ({
-      queryKey: ['nook', c],
-      queryFn: () => nookipedia[c](),
-    })),
-  })
-  // 숨긴 아이템은 전체·보유 카운트 모두에서 제외(아이템 페이지와 동일 기준)
-  const hiddenCount = Object.values(itemMap).filter((s) => s.hidden).length
-  const itemTotal = Math.max(
-    0,
-    itemQueries.reduce((sum, qr) => sum + (qr.data?.length ?? 0), 0) - hiddenCount,
+  const recipesQ = useQueries({
+    queries: [{ queryKey: ['nook', 'recipes'], queryFn: () => nookipedia.recipes() }],
+  })[0]
+  const villagersQ = useQueries({
+    queries: [{ queryKey: ['nook', 'villagers'], queryFn: () => nookipedia.villagers({ nhdetails: true }) }],
+  })[0]
+
+  const itemRate = store.rate(store.rows)
+  const todayEvents = eventsOn(events, iso)
+
+  // 거주 주민
+  const residents = useMemo(
+    () => (villagersQ.data ?? []).filter((v) => vmap[v.name]?.resident),
+    [villagersQ.data, vmap],
   )
-  const itemOwned = Object.values(itemMap).filter((s) => s.owned && !s.hidden).length
+  // 선택일 생일 주민(거주 우선 표시는 전체 대상으로 계산)
+  const monthName = MONTHS[date.getMonth()]
+  const birthdays = useMemo(
+    () =>
+      (villagersQ.data ?? []).filter(
+        (v) => v.birthday_month === monthName && Number(v.birthday_day) === date.getDate(),
+      ),
+    [villagersQ.data, monthName, date],
+  )
 
   return (
     <div className="space-y-6">
-      <section className="card flex flex-col items-start gap-3 p-6 sm:flex-row sm:items-center">
-        <span className="text-5xl">🏝️</span>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold">{ui.appName}</h1>
-          <p className="mt-1 text-sm text-leaf-500">
-            모여봐요 동물의 숲 도감·컬렉션·주민 정보를 한 곳에서. 로그인하면 진행상황이 저장돼요.
-          </p>
+      {/* 날짜 + 이벤트 + 생일 + To-do */}
+      <section className="card space-y-3 p-5">
+        <DatePicker />
+        <div className="flex flex-wrap gap-2 text-sm">
+          {todayEvents.length > 0 ? (
+            todayEvents.map((e, i) => (
+              <span key={i} className="chip">🎉 {tEvent(e.event)}</span>
+            ))
+          ) : (
+            <span className="text-leaf-400">오늘은 특별한 이벤트가 없어요.</span>
+          )}
+          {birthdays.map((v) => (
+            <span key={v.name} className="chip">🎂 {koV(v.name)} 생일</span>
+          ))}
         </div>
         {!user && (
           <button onClick={signInWithGoogle} className="btn-primary">
@@ -58,61 +88,66 @@ export function HomePage() {
         )}
       </section>
 
+      <TodoList />
+
       {/* 진행률 요약 */}
       <section className="card space-y-4 p-6">
         <h2 className="text-lg font-bold">📊 진행률 요약</h2>
-        {!user && (
-          <p className="text-sm text-leaf-400">{ui.loginRequiredToSave}</p>
-        )}
+        {!user && <p className="text-sm text-leaf-400">{ui.loginRequiredToSave}</p>}
         <div className="grid gap-4 sm:grid-cols-2">
           {CRITTER_CATS.map((c, i) => {
             const list = critterQueries[i].data ?? []
             const donated = list.filter((r) => map[`${c}:${r.name}`]?.donated).length
-            return (
-              <ProgressBar
-                key={c}
-                value={donated}
-                total={list.length}
-                label={`${critterCategory[c]} 기증`}
-              />
-            )
+            return <ProgressBar key={c} value={donated} total={list.length} label={`${critterCategory[c]} 기증`} />
           })}
           <ProgressBar
             value={(recipesQ.data ?? []).filter((r) => learned.has(r.name)).length}
             total={(recipesQ.data ?? []).length}
             label="DIY 레시피 습득"
           />
-          <ProgressBar value={itemOwned} total={itemTotal} label="아이템 보유" />
+          <ProgressBar value={itemRate.owned} total={itemRate.total} label="아이템 보유(숨김 제외)" />
         </div>
       </section>
 
-      {/* 바로가기 */}
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <NavCard to="/critterpedia" emoji="🐟" label={nav.critterpedia} desc="물고기·곤충·해산물·화석·미술품" />
-        <NavCard to="/items" emoji="🪑" label={nav.items} desc="가구·의류·리폼·가격" />
-        <NavCard to="/recipes" emoji="🔨" label={nav.recipes} desc="재료·습득·입수처" />
-        <NavCard to="/villagers" emoji="🐾" label={nav.villagers} desc="취향·호감 선물·성격 레시피" />
+      {/* 우리 섬 주민 */}
+      <section className="card space-y-3 p-6">
+        <h2 className="text-lg font-bold">🏝 우리 섬 주민 ({residents.length})</h2>
+        {residents.length === 0 ? (
+          <p className="text-sm text-leaf-400">
+            주민 페이지에서 '내 주민'을 등록하면 여기에 표시돼요.
+          </p>
+        ) : (
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-5 lg:grid-cols-8">
+            {residents.map((v) => {
+              const hasPhoto = vmap[v.name]?.photo
+              return (
+                <button key={v.name} onClick={() => setDetail(v)} className="flex flex-col items-center">
+                  <div className="relative">
+                    <img
+                      src={v.nh_details?.icon_url || v.image_url}
+                      alt={v.name}
+                      loading="lazy"
+                      className="h-14 w-14 object-contain"
+                    />
+                    <span className={'absolute -right-1 -top-1 text-xs ' + (hasPhoto ? '' : 'opacity-25 grayscale')}>
+                      🖼️
+                    </span>
+                  </div>
+                  <span className="mt-0.5 truncate text-[11px]">{koV(v.name)}</span>
+                  <span className="text-[10px] text-leaf-400">{tr(speciesKo, v.species)}</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
       </section>
-    </div>
-  )
-}
 
-function NavCard({
-  to,
-  emoji,
-  label,
-  desc,
-}: {
-  to: string
-  emoji: string
-  label: string
-  desc: string
-}) {
-  return (
-    <Link to={to} className="card flex flex-col gap-1 p-5 hover:-translate-y-0.5">
-      <span className="text-3xl">{emoji}</span>
-      <span className="mt-1 font-bold">{label}</span>
-      <span className="text-xs text-leaf-400">{desc}</span>
-    </Link>
+      <VillagerDetailModal
+        villager={detail}
+        koName={detail ? koV(detail.name) : undefined}
+        photoOwned={detail ? !!vmap[detail.name]?.photo : false}
+        onClose={() => setDetail(null)}
+      />
+    </div>
   )
 }

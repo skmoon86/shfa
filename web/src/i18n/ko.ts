@@ -37,9 +37,10 @@ export const ui = {
 
 export const nav = {
   home: '홈',
+  calendar: '캘린더',
   critterpedia: '도감',
   items: '아이템',
-  recipes: 'DIY 레시피',
+  recipes: '레시피',
   villagers: '주민',
 }
 
@@ -294,4 +295,49 @@ export function tSource(from: string): string {
 export function tPersonality(p?: string): string {
   if (!p) return ''
   return personality[p] ?? p
+}
+
+// 이벤트(/nh/events 의 event 필드) 한국어. 북반구 기준 행사명.
+export const eventLabel: Record<string, string> = {
+  "New Year's Day": '새해',
+  "New Year's Eve": '섣달그믐(카운트다운)',
+  'Festivale': '페스티벌',
+  'Bunny Day': '부활절',
+  'Nature Day': '자연의 날',
+  'May Day': '메이데이',
+  'International Museum Day': '국제 박물관의 날',
+  'Wedding Season': '웨딩 시즌',
+  "Mother's Day": '어머니의 날',
+  "Father's Day": '아버지의 날',
+  'Fishing Tourney': '낚시 대회',
+  'Bug-Off': '곤충 채집 대회',
+  'Bug Off': '곤충 채집 대회',
+  'Fireworks Show': '불꽃놀이',
+  'Summer Solstice': '하지',
+  'Winter Solstice': '동지',
+  'Halloween': '핼러윈',
+  'Turkey Day': '추수감사절',
+  'Toy Day': '토이데이',
+  'Festival of Lights': '빛의 축제',
+  'Countdown': '카운트다운',
+  "Earth Day": '지구의 날',
+  'Harvest Festival': '추수 축제',
+  'Sports Fair': '스포츠 페어',
+  'Mushrooming Season': '버섯 시즌',
+  'Maple Leaf Season': '단풍 시즌',
+  'Cherry-Blossom Season': '벚꽃 시즌',
+  'Snowflake Season': '눈송이 시즌',
+  'Seollal': '설날',
+  'Lunar New Year': '설날',
+}
+export function tEvent(name?: string): string {
+  if (!name) return ''
+  if (eventLabel[name]) return eventLabel[name]
+  const lower = name.toLowerCase()
+  const hit = Object.keys(eventLabel).find((k) => k.toLowerCase() === lower)
+  if (hit) return eventLabel[hit]
+  // "<주민> Birthday" → "<주민> 생일"
+  const bm = /^(.+?)'s birthday$/i.exec(name)
+  if (bm) return `${bm[1]} 생일`
+  return name
 }

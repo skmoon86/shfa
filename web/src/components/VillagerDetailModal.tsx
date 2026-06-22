@@ -25,10 +25,12 @@ import { Sheet } from './Sheet'
 export function VillagerDetailModal({
   villager,
   koName,
+  photoOwned = false,
   onClose,
 }: {
   villager: Villager | null
   koName?: string
+  photoOwned?: boolean
   onClose: () => void
 }) {
   const open = !!villager
@@ -145,6 +147,30 @@ export function VillagerDetailModal({
                   <figcaption className="mt-1 text-xs text-leaf-400">내부</figcaption>
                 </figure>
               )}
+            </div>
+          </section>
+        )}
+
+        {/* 사진(액자) · 포스터 */}
+        {(d?.photo_url || villager.image_url) && (
+          <section className="mb-4">
+            <h3 className="mb-2 text-sm font-bold">
+              🖼️ 사진 · 포스터
+              <span className={'chip ml-2 ' + (photoOwned ? '' : 'opacity-50')}>
+                {photoOwned ? '액자 획득함' : '미획득'}
+              </span>
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              {d?.photo_url && (
+                <figure className="rounded-xl border border-leaf-100 p-2 text-center dark:border-leaf-700">
+                  <img src={d.photo_url} alt="액자 사진" loading="lazy" className="mx-auto max-h-40 object-contain" />
+                  <figcaption className="mt-1 text-xs text-leaf-400">액자(사진) — 친밀도 최대 시 획득</figcaption>
+                </figure>
+              )}
+              <figure className="rounded-xl border border-leaf-100 p-2 text-center dark:border-leaf-700">
+                <img src={villager.image_url} alt="포스터" loading="lazy" className="mx-auto max-h-40 object-contain" />
+                <figcaption className="mt-1 text-xs text-leaf-400">포스터 — 너굴 쇼핑/포스터</figcaption>
+              </figure>
             </div>
           </section>
         )}

@@ -250,6 +250,14 @@ export interface Recipe {
   availability: Availability[]
 }
 
+// ── 이벤트(계절/행사) ─────────────────────────────────────
+// /nh/events?year=YYYY → 날짜별 행사. 북반구 기준.
+export interface NHEvent {
+  event: string
+  date: string // "YYYY-MM-DD"
+  type: string // "Event", "Nook Shopping event" 등
+}
+
 // ── 주민 ──────────────────────────────────────────────────
 export interface VillagerNHDetails {
   image_url?: string
@@ -357,4 +365,5 @@ export const nookipedia = {
   tools: (params?: QueryParams) => nookFetch<Tool[]>('nh/tools', params),
   photos: (params?: QueryParams) => nookFetch<Photo[]>('nh/photos', params),
   gyroids: (params?: QueryParams) => nookFetch<Gyroid[]>('nh/gyroids', params),
+  events: (params?: QueryParams) => nookFetch<NHEvent[]>('nh/events', params),
 }

@@ -1,122 +1,81 @@
 import { useMemo, useState } from 'react'
-import { useQueries, useQuery } from '@tanstack/react-query'
-import { nookipedia } from '../lib/nookipedia'
 import { useItemCollection } from '../hooks/useProgress'
+import { useItemsStore } from '../hooks/useItemsStore'
 import { useKoNamesMulti } from '../hooks/useKoNames'
 import { useCanSave, ToggleButton } from '../components/Toggle'
 import { Spinner, ErrorState, EmptyState } from '../components/states'
 import { SearchBar } from '../components/SearchBar'
 import { CategoryTabs } from '../components/CategoryTabs'
-import { ItemDetailModal, type DetailItem } from '../components/ItemDetailModal'
-import { itemCategory, ui, tSource } from '../i18n/ko'
+import { ProgressBar } from '../components/ProgressBar'
+import { ItemDetailModal } from '../components/ItemDetailModal'
+import { BUCKET_ORDER, bucketLabel, type Bucket, type ItemRow } from '../lib/itemBuckets'
+import { ui, tSource } from '../i18n/ko'
 import { fmtBells, fmtBuy } from '../lib/format'
 
-type DataCat = 'furniture' | 'clothing' | 'interior' | 'tools' | 'items' | 'photos' | 'gyroids'
-const DATA_CATS: DataCat[] = ['furniture', 'clothing', 'interior', 'tools', 'items', 'photos', 'gyroids']
-const TABS: { code: DataCat; label: string }[] = DATA_CATS.map((c) => ({
-  code: c,
-  label: itemCategory[c],
-}))
+const KO_CATS = ['furniture', 'clothing', 'interior', 'items', 'tools', 'gyroids']
+const TABS = BUCKET_ORDER.map((b) => ({ code: b, label: bucketLabel[b] }))
 const PAGE = 60
 
-type Row = DetailItem & { __cat: DataCat }
+type Check = 'owned' | 'reform' | 'catalog' | 'recipe' | 'variation' | 'unowned' | 'wishlist' | 'hidden'
 
 export function ItemsPage() {
-  const [selected, setSelected] = useState<Set<DataCat>>(new Set())
+  const [selected, setSelected] = useState<Set<Bucket>>(new Set())
   const [q, setQ] = useState('')
   const [limit, setLimit] = useState(PAGE)
-  const [filter, setFilter] = useState<'all' | 'owned' | 'unowned' | 'wishlist' | 'hidden'>('all')
-  const [reformOnly, setReformOnly] = useState(false)
-  const [catalogOnly, setCatalogOnly] = useState(false)
+  const [acq, setAcq] = useState('') // 선택된 획득방법(원문 from)
   const [sortBy, setSortBy] = useState<'default' | 'name'>('default')
-  const [detail, setDetail] = useState<Row | null>(null)
+  const [checks, setChecks] = useState<Set<Check>>(new Set())
+  const [detail, setDetail] = useState<ItemRow | null>(null)
   const canSave = useCanSave()
-  const { map, toggle } = useItemCollection()
-  const ko = useKoNamesMulti(DATA_CATS)
+  const { toggle } = useItemCollection()
+  const store = useItemsStore()
+  const ko = useKoNamesMulti(KO_CATS)
 
-  // 명화 위작 존재 여부 판별용(도감 페이지와 캐시 공유)
-  const artQ = useQuery({ queryKey: ['nook', 'art'], queryFn: () => nookipedia.art() })
-  // 위작이 존재하지 않는 명화 영문명 집합
-  const noFakeArt = useMemo(
-    () =>
-      new Set(
-        (artQ.data ?? []).filter((a) => !a.has_fake).map((a) => a.name.toLowerCase().trim()),
-      ),
-    [artQ.data],
-  )
-
-  // 이름 한글화 ((fake)/(real) 접미사 처리 포함)
-  const itemKo = (r: Row): string => {
-    const direct = ko(r.name, r.__cat)
-    if (noFakeArt.has(r.name.toLowerCase().trim())) return direct + ' (위작없음)'
-    if (direct !== r.name) return direct
-    const m = /^(.*?)\s*\((fake|real)\)$/i.exec(r.name)
-    if (m) {
-      const base = ko(m[1], r.__cat)
-      if (base !== m[1]) return base + (/fake/i.test(m[2]) ? ' (위작)' : ' (진품)')
-    }
-    return direct
-  }
-
-  const toggleCat = (c: DataCat) => {
-    setSelected((prev) => {
+  const itemKo = (r: ItemRow) => r.__ko ?? ko(r.name, r.__cat)
+  const has = (c: Check) => checks.has(c)
+  const toggleCheck = (c: Check) =>
+    setChecks((prev) => {
       const next = new Set(prev)
       next.has(c) ? next.delete(c) : next.add(c)
       return next
     })
-    setLimit(PAGE)
-  }
 
-  // 아무것도 선택 안 하면 7개 모두, 아니면 선택 카테고리만 로드
-  const cats: DataCat[] = selected.size === 0 ? DATA_CATS : DATA_CATS.filter((c) => selected.has(c))
-  const queries = useQueries({
-    queries: cats.map((c) => ({
-      queryKey: ['nook', c],
-      queryFn: () => nookipedia[c]() as Promise<DetailItem[]>,
-    })),
-  })
-  const isLoading = queries.some((qr) => qr.isLoading)
-  const anyError = queries.some((qr) => qr.isError)
-  const allError = queries.length > 0 && queries.every((qr) => qr.isError)
-
-  const data = useMemo<Row[]>(() => {
-    const out: Row[] = []
-    cats.forEach((c, i) => {
-      for (const r of (queries[i].data ?? []) as DetailItem[]) {
-        // 명화 위작은 수집 대상이 아니므로 목록에서 제외
-        if (/\(fake\)$/i.test(r.name)) continue
-        out.push(Object.assign({ __cat: c }, r) as Row)
-      }
-    })
-    return out
+  // 선택 버킷의 행(숨김 보기 여부는 아래에서 처리)
+  const bucketRows = useMemo(() => {
+    if (selected.size === 0) return store.rows
+    return store.rows.filter((r) => selected.has(r.__bucket))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cats.join(','), queries.map((qr) => qr.data).join(',')])
+  }, [store.rows, [...selected].join(',')])
 
-  const acq = (r: DetailItem) => (r.availability ?? []).map((a) => tSource(a.from)).join(', ')
-  const inCatalog = (r: DetailItem) =>
-    (r.availability ?? []).some((a) => /Nook|catalog|Shopping/i.test(a.from)) ||
-    (r.buy ?? []).some((b) => b.price > 0)
+  // 획득방법 드롭다운 옵션(현재 버킷의 고유 from)
+  const acqOptions = useMemo(() => {
+    const set = new Set<string>()
+    for (const r of bucketRows) for (const a of r.availability ?? []) if (a.from) set.add(a.from)
+    return [...set].sort((a, b) => tSource(a).localeCompare(tSource(b), 'ko'))
+  }, [bucketRows])
+
+  const map = store.itemMap
 
   const filtered = useMemo(() => {
-    let rows = data
-    // 숨김 항목: '숨김' 보기에서만 노출하고, 그 외 모든 보기/카운트에서 제외
-    rows =
-      filter === 'hidden'
-        ? rows.filter((r) => map[r.name]?.hidden)
-        : rows.filter((r) => !map[r.name]?.hidden)
+    let rows = bucketRows
+    rows = has('hidden')
+      ? rows.filter((r) => map[r.name]?.hidden)
+      : rows.filter((r) => !map[r.name]?.hidden)
     if (q.trim()) {
       const l = q.trim().toLowerCase()
-      rows = rows.filter(
-        (r) => r.name.toLowerCase().includes(l) || ko(r.name, r.__cat).toLowerCase().includes(l),
-      )
+      rows = rows.filter((r) => r.name.toLowerCase().includes(l) || itemKo(r).toLowerCase().includes(l))
     }
-    if (reformOnly) rows = rows.filter((r) => r.customizable)
-    if (catalogOnly) rows = rows.filter((r) => inCatalog(r))
-    if (filter === 'unowned') rows = rows.filter((r) => !map[r.name]?.owned)
-    else if (filter === 'owned' || filter === 'wishlist')
-      rows = rows.filter((r) => map[r.name]?.[filter])
+    if (acq) rows = rows.filter((r) => (r.availability ?? []).some((a) => a.from === acq))
+    if (has('reform')) rows = rows.filter((r) => r.__reformable)
+    if (has('catalog')) rows = rows.filter((r) => r.__catalogable)
+    if (has('recipe')) rows = rows.filter((r) => r.__hasRecipe)
+    if (has('variation')) rows = rows.filter((r) => r.__hasVariation)
+    if (has('owned')) rows = rows.filter((r) => map[r.name]?.owned)
+    if (has('unowned')) rows = rows.filter((r) => !map[r.name]?.owned)
+    if (has('wishlist')) rows = rows.filter((r) => map[r.name]?.wishlist)
     return rows
-  }, [data, q, reformOnly, catalogOnly, filter, map, ko])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bucketRows, q, acq, [...checks].join(','), map, ko])
 
   const sorted = useMemo(() => {
     if (sortBy !== 'name') return filtered
@@ -125,8 +84,7 @@ export function ItemsPage() {
   }, [filtered, sortBy, ko])
 
   const shown = sorted.slice(0, limit)
-  // 조회조건(검색·필터·카탈로그·리폼)이 적용된 결과 기준 수량
-  const ownedCount = filtered.filter((r) => map[r.name]?.owned).length
+  const rate = store.rate(filtered)
 
   return (
     <div>
@@ -135,65 +93,74 @@ export function ItemsPage() {
       <CategoryTabs
         tabs={TABS}
         selected={selected}
-        onToggle={toggleCat}
+        onToggle={(c) => {
+          setSelected((prev) => {
+            const next = new Set(prev)
+            next.has(c) ? next.delete(c) : next.add(c)
+            return next
+          })
+          setLimit(PAGE)
+          setAcq('')
+        }}
         onClear={() => {
           setSelected(new Set())
           setLimit(PAGE)
+          setAcq('')
         }}
       />
 
-      <div className="card mb-4 flex flex-wrap items-center gap-3 p-4">
-        <SearchBar value={q} onChange={setQ} />
-        <select
-          value={filter}
-          onChange={(e) => setFilter(e.target.value as typeof filter)}
-          className="rounded-xl border border-leaf-200 bg-white px-3 py-2 text-sm dark:border-leaf-700 dark:bg-leaf-800"
-        >
-          <option value="all">{ui.all}</option>
-          <option value="owned">{ui.owned}</option>
-          <option value="unowned">미보유</option>
-          <option value="wishlist">{ui.wishlist}</option>
-          <option value="hidden">숨김</option>
-        </select>
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-          className="rounded-xl border border-leaf-200 bg-white px-3 py-2 text-sm dark:border-leaf-700 dark:bg-leaf-800"
-        >
-          <option value="default">기본 정렬</option>
-          <option value="name">가나다순</option>
-        </select>
-        <label className="flex items-center gap-1.5 text-sm">
-          <input
-            type="checkbox"
-            checked={reformOnly}
-            onChange={(e) => setReformOnly(e.target.checked)}
-          />
-          {ui.reformable}만
-        </label>
-        <label className="flex items-center gap-1.5 text-sm">
-          <input
-            type="checkbox"
-            checked={catalogOnly}
-            onChange={(e) => setCatalogOnly(e.target.checked)}
-          />
-          카탈로그 등록가능
-        </label>
-        <span className="ml-auto text-xs text-leaf-400">
-          {filter === 'hidden'
-            ? `숨김 ${filtered.length}`
-            : `${ui.owned} ${ownedCount} / 전체 ${filtered.length}`}
-        </span>
+      <div className="card mb-4 space-y-3 p-4">
+        <ProgressBar value={rate.owned} total={rate.total} label="보유율(숨김 제외)" />
+        <div className="flex flex-wrap items-center gap-3">
+          <SearchBar value={q} onChange={setQ} />
+          <select
+            value={acq}
+            onChange={(e) => setAcq(e.target.value)}
+            className="rounded-xl border border-leaf-200 bg-white px-3 py-2 text-sm dark:border-leaf-700 dark:bg-leaf-800"
+          >
+            <option value="">획득방법 전체</option>
+            {acqOptions.map((a) => (
+              <option key={a} value={a}>
+                {tSource(a)}
+              </option>
+            ))}
+          </select>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+            className="rounded-xl border border-leaf-200 bg-white px-3 py-2 text-sm dark:border-leaf-700 dark:bg-leaf-800"
+          >
+            <option value="default">기본 정렬</option>
+            <option value="name">가나다순</option>
+          </select>
+        </div>
+        <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-sm">
+          {([
+            ['owned', ui.owned],
+            ['unowned', '미보유'],
+            ['wishlist', ui.wishlist],
+            ['reform', ui.reformable],
+            ['catalog', '카탈로그'],
+            ['recipe', '레시피 있음'],
+            ['variation', '변형 있음'],
+            ['hidden', '숨김'],
+          ] as [Check, string][]).map(([c, label]) => (
+            <label key={c} className="flex items-center gap-1.5">
+              <input type="checkbox" checked={has(c)} onChange={() => toggleCheck(c)} />
+              {label}
+            </label>
+          ))}
+        </div>
       </div>
 
-      {anyError && data.length > 0 && (
+      {store.anyError && store.rows.length > 0 && (
         <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-2 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
           일부 카테고리를 일시적으로 불러오지 못했어요(Nookipedia 서버 상태). 잠시 후 새로고침해 보세요.
         </div>
       )}
-      {isLoading && data.length === 0 ? (
+      {store.isLoading ? (
         <Spinner />
-      ) : allError && data.length === 0 ? (
+      ) : store.allError && store.rows.length === 0 ? (
         <ErrorState error={new Error('Nookipedia 서버가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도하세요.')} />
       ) : shown.length === 0 ? (
         <EmptyState />
@@ -202,12 +169,11 @@ export function ItemsPage() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {shown.map((r) => {
               const st = map[r.name] ?? { owned: false, wishlist: false, hidden: false }
+              const acqText = (r.availability ?? []).map((a) => tSource(a.from)).join(', ')
               return (
                 <div key={`${r.__cat}:${r.name}`} className="card relative flex flex-col p-3">
                   <button
-                    onClick={() =>
-                      toggle.mutate({ itemId: r.name, category: r.__cat, field: 'hidden' })
-                    }
+                    onClick={() => toggle.mutate({ itemId: r.name, category: r.__cat, field: 'hidden' })}
                     disabled={!canSave}
                     title={st.hidden ? '숨김 해제' : '숨기기'}
                     className="absolute right-1.5 top-1.5 z-10 rounded-full border border-leaf-200 bg-white/80 px-1.5 py-0.5 text-xs leading-none text-leaf-500 backdrop-blur hover:bg-leaf-100 disabled:opacity-40 dark:border-leaf-700 dark:bg-leaf-800/80 dark:hover:bg-leaf-700"
@@ -232,19 +198,20 @@ export function ItemsPage() {
                     <div>🛒 {ui.buyPrice} {fmtBuy(r.buy)}</div>
                     <div>💰 {ui.sellPrice} {fmtBells(r.sell)} 벨</div>
                     <div className="flex flex-wrap gap-1">
-                      {r.customizable && <span className="text-amber-600">🎨 {ui.reform}</span>}
-                      {!r.customizable && (r.variations?.length ?? 0) >= 2 && (
+                      {r.__reformable && <span className="text-amber-600">🎨 {ui.reform}</span>}
+                      {!r.__reformable && r.__hasVariation && (
                         <span className="text-sky-600">🔀 {ui.variations} {r.variations!.length}종</span>
                       )}
+                      {r.__hasRecipe && <span className="text-leaf-500">🔨 레시피</span>}
                     </div>
                   </div>
-                  {acq(r) && (
-                    <div className="mt-0.5 truncate text-[11px] text-leaf-400" title={acq(r)}>
-                      📦 {acq(r)}
+                  {acqText && (
+                    <div className="mt-0.5 truncate text-[11px] text-leaf-400" title={acqText}>
+                      📦 {acqText}
                     </div>
                   )}
                   <div className="mt-0.5">
-                    {inCatalog(r) ? (
+                    {r.__catalogable ? (
                       <span className="chip text-[10px]">🗂 카탈로그</span>
                     ) : (
                       <span className="text-[10px] text-leaf-300">카탈로그 미등록</span>

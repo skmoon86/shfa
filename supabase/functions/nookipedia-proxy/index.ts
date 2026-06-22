@@ -32,6 +32,7 @@ const ALLOWED_NH = new Set([
   'tools',
   'photos',
   'gyroids',
+  'events',
 ])
 // nh 아래가 아닌 게임 공통 엔드포인트
 const ALLOWED_TOP = new Set(['villagers'])
@@ -49,6 +50,48 @@ const LIST_PATCHES: Record<string, string[]> = {
 const MIN_LIST_LEN = 5
 function isDegenerateList(data: unknown): boolean {
   return Array.isArray(data) && data.length < MIN_LIST_LEN
+}
+
+// 엔드포인트별 정상 최소 개수. 업스트림 일시 오류로 '잘린' 응답(예: recipes는
+// 924개여야 하나 73개만 캐시된 사례)을 전역 MIN_LIST_LEN(5)으로는 못 잡으므로
+// 별도 하한을 둔다. events는 연 단위 호출이라 응답이 작을 수 있어 의도적으로 제외.
+const MIN_COUNTS: Record<string, number> = {
+  'nh/recipes': 300,
+  'nh/items': 250,
+  'nh/furniture': 1500,
+  'nh/clothing': 1000,
+  'nh/interior': 400,
+  'nh/photos': 500,
+  'nh/tools': 80,
+  'nh/gyroids': 20,
+  'nh/fish': 60,
+  'nh/bugs': 60,
+  'nh/sea': 30,
+  'nh/art': 30,
+}
+function isTruncatedList(endpointPath: string, data: unknown): boolean {
+  const min = MIN_COUNTS[endpointPath]
+  if (min == null || !Array.isArray(data)) return false
+  return data.length < min
+}
+
+// category 필드가 없는 엔드포인트는 isMislabeledList로 오염을 못 잡는다.
+// (예: nh/items 캐시가 자이로이드 데이터로 오염된 사례.) 정상 응답을 잘못
+// 차단하지 않도록 '기대 키 누락'이 아니라 '다른 엔드포인트의 고유 키 존재'로 판정.
+//  - 자이로이드 고유: sound / cyrus_price
+//  - 잡화(items) 고유: edible / is_fence / material_type
+const FOREIGN_SIGNATURES: Record<string, string[]> = {
+  'nh/items': ['sound', 'cyrus_price'], // items 자리에 자이로이드가 오면
+  'nh/gyroids': ['edible', 'is_fence', 'material_type'], // gyroids 자리에 items가 오면
+  'nh/tools': ['sound', 'edible', 'cyrus_price'],
+}
+function isWrongShapeList(endpointPath: string, data: unknown): boolean {
+  const foreign = FOREIGN_SIGNATURES[endpointPath]
+  if (!foreign || !Array.isArray(data) || data.length === 0) return false
+  const first = data[0]
+  if (!first || typeof first !== 'object') return false
+  const has = (k: string) => Object.prototype.hasOwnProperty.call(first, k)
+  return foreign.some(has) // 다른 엔드포인트 고유 키가 있으면 오염
 }
 
 // 엔드포인트별 정상 category 값(소문자). 캐시가 다른 엔드포인트 데이터로 오염되면
@@ -78,9 +121,15 @@ function isMislabeledList(endpointPath: string, data: unknown): boolean {
   return bad > cats.length / 2
 }
 
-// 짧은 응답(잘림) 또는 카테고리 불일치(다른 엔드포인트로 오염) 통합 판정.
+// 짧은 응답(잘림) · 엔드포인트별 최소개수 미달 · 카테고리 불일치 · 필드 시그니처
+// 불일치(다른 엔드포인트로 오염) 통합 판정.
 function isContaminated(endpointPath: string, data: unknown): boolean {
-  return isDegenerateList(data) || isMislabeledList(endpointPath, data)
+  return (
+    isDegenerateList(data) ||
+    isTruncatedList(endpointPath, data) ||
+    isMislabeledList(endpointPath, data) ||
+    isWrongShapeList(endpointPath, data)
+  )
 }
 
 const corsHeaders = {

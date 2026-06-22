@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext'
 export interface CritterState {
   caught: boolean
   donated: boolean
+  model: boolean // 모형 보유(물고기·곤충 한정, 저스틴/레온 주문 제작)
 }
 type CritterMap = Record<string, CritterState> // key: `${category}:${entryId}`
 
@@ -21,13 +22,14 @@ export function useCritterpedia() {
     queryFn: async (): Promise<CritterMap> => {
       const { data, error } = await supabase
         .from('critterpedia_progress')
-        .select('category, entry_id, caught, donated')
+        .select('category, entry_id, caught, donated, model')
       if (error) throw error
       const map: CritterMap = {}
       for (const r of data ?? []) {
         map[`${r.category}:${r.entry_id}`] = {
           caught: r.caught,
           donated: r.donated,
+          model: r.model ?? false,
         }
       }
       return map
@@ -38,13 +40,13 @@ export function useCritterpedia() {
     mutationFn: async (args: {
       category: string
       entryId: string
-      field: 'caught' | 'donated'
+      field: 'caught' | 'donated' | 'model'
     }) => {
       if (!uid) throw new Error('로그인이 필요합니다.')
       const cur =
         (qc.getQueryData<CritterMap>(key) ?? {})[
           `${args.category}:${args.entryId}`
-        ] ?? { caught: false, donated: false }
+        ] ?? { caught: false, donated: false, model: false }
       const next = { ...cur, [args.field]: !cur[args.field] }
       // 기증하면 자동으로 채집 처리
       if (args.field === 'donated' && next.donated) next.caught = true
@@ -54,6 +56,7 @@ export function useCritterpedia() {
         entry_id: args.entryId,
         caught: next.caught,
         donated: next.donated,
+        model: next.model,
         updated_at: new Date().toISOString(),
       })
       if (error) throw error

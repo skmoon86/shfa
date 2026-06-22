@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQueries } from '@tanstack/react-query'
 import { nookipedia, type Critter, type Fossil, type Art } from '../lib/nookipedia'
 import { useCritterpedia } from '../hooks/useProgress'
+import { useUserPrefs } from '../hooks/useUserPrefs'
+import { useSelectedDate } from '../context/DateContext'
 import { useKoNamesMulti } from '../hooks/useKoNames'
 import { useCanSave, ToggleButton } from '../components/Toggle'
 import { Spinner, ErrorState, EmptyState } from '../components/states'
@@ -19,8 +21,7 @@ const TABS: { code: DataCat; label: string }[] = DATA_CATS.map((c) => ({
   label: critterCategory[c],
 }))
 const CRITTER_CATS: DataCat[] = ['fish', 'bugs', 'sea']
-
-const currentMonth = new Date().getMonth() + 1
+const MODEL_CATS: DataCat[] = ['fish', 'bugs'] // 모형 대상(저스틴/레온)
 
 type Row = (Critter | Fossil | Art) & { __cat: DataCat }
 
@@ -35,9 +36,22 @@ export function CritterpediaPage() {
   const [hemi, setHemi] = useState<'north' | 'south'>('north')
   const [onlyNow, setOnlyNow] = useState(false)
   const [onlyUndonated, setOnlyUndonated] = useState(false)
+  const [onlyNoModel, setOnlyNoModel] = useState(false)
   const canSave = useCanSave()
   const { map, toggle } = useCritterpedia()
+  const { prefs, update: updatePrefs } = useUserPrefs()
+  const { date } = useSelectedDate()
+  const currentMonth = date.getMonth() + 1
   const ko = useKoNamesMulti(DATA_CATS)
+
+  // 반구 기본값을 환경설정에서 동기화(로그인 시). 변경하면 저장.
+  useEffect(() => {
+    setHemi(prefs.hemisphere)
+  }, [prefs.hemisphere])
+  const changeHemi = (h: 'north' | 'south') => {
+    setHemi(h)
+    if (canSave) updatePrefs.mutate({ hemisphere: h })
+  }
 
   // 5개 카테고리를 모두 불러와(작은 데이터셋) 탭 전환을 즉시 처리
   const queries = useQueries({
@@ -98,12 +112,22 @@ export function CritterpediaPage() {
     if (onlyUndonated) {
       rows = rows.filter((r) => !map[`${r.__cat}:${r.name}`]?.donated)
     }
+    if (onlyNoModel) {
+      rows = rows.filter(
+        (r) => MODEL_CATS.includes(r.__cat) && !map[`${r.__cat}:${r.name}`]?.model,
+      )
+    }
     return rows
-  }, [data, q, onlyNow, onlyUndonated, hemi, ko, map])
+  }, [data, q, onlyNow, onlyUndonated, onlyNoModel, hemi, currentMonth, ko, map])
 
   const total = data.length
   const donatedCount = data.filter((r) => map[`${r.__cat}:${r.name}`]?.donated).length
   const hasCritters = data.some((r) => CRITTER_CATS.includes(r.__cat))
+  const hasModelCats = data.some((r) => MODEL_CATS.includes(r.__cat))
+  // 모형 진행(물고기 80 + 곤충 80 = 160)
+  const modelRows = useMemo(() => allRows.filter((r) => MODEL_CATS.includes(r.__cat)), [allRows])
+  const modelTotal = modelRows.length
+  const modelDone = modelRows.filter((r) => map[`${r.__cat}:${r.name}`]?.model).length
 
   return (
     <div>
@@ -130,13 +154,13 @@ export function CritterpediaPage() {
             <>
               <div className="flex overflow-hidden rounded-lg border border-leaf-200 text-xs dark:border-leaf-700">
                 <button
-                  onClick={() => setHemi('north')}
+                  onClick={() => changeHemi('north')}
                   className={hemi === 'north' ? 'bg-leaf-500 px-3 py-1.5 text-white' : 'px-3 py-1.5'}
                 >
                   {ui.northern}
                 </button>
                 <button
-                  onClick={() => setHemi('south')}
+                  onClick={() => changeHemi('south')}
                   className={hemi === 'south' ? 'bg-leaf-500 px-3 py-1.5 text-white' : 'px-3 py-1.5'}
                 >
                   {ui.southern}
@@ -160,7 +184,20 @@ export function CritterpediaPage() {
             />
             미기증만
           </label>
+          {hasModelCats && (
+            <label className="flex items-center gap-1.5 text-sm">
+              <input
+                type="checkbox"
+                checked={onlyNoModel}
+                onChange={(e) => setOnlyNoModel(e.target.checked)}
+              />
+              모형 미보유만
+            </label>
+          )}
         </div>
+        {hasModelCats && (
+          <div className="text-xs text-leaf-400">🐟 모형 {modelDone} / {modelTotal}</div>
+        )}
         {!canSave && <p className="text-xs text-leaf-400">{ui.loginRequiredToSave}</p>}
       </div>
 
@@ -180,7 +217,8 @@ export function CritterpediaPage() {
           {filtered.map((r) => {
             const rcat = r.__cat
             const isCritter = CRITTER_CATS.includes(rcat)
-            const st = map[`${rcat}:${r.name}`] ?? { caught: false, donated: false }
+            const isModelCat = MODEL_CATS.includes(rcat)
+            const st = map[`${rcat}:${r.name}`] ?? { caught: false, donated: false, model: false }
             const av = isCritter
               ? hemi === 'north'
                 ? (r as Critter).availability_north
@@ -266,6 +304,16 @@ export function CritterpediaPage() {
                       toggle.mutate({ category: rcat, entryId: r.name, field: 'donated' })
                     }
                   />
+                  {isModelCat && (
+                    <ToggleButton
+                      label="모형"
+                      active={st.model}
+                      disabled={!canSave}
+                      onClick={() =>
+                        toggle.mutate({ category: rcat, entryId: r.name, field: 'model' })
+                      }
+                    />
+                  )}
                 </div>
               </div>
             )

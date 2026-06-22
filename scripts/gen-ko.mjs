@@ -120,6 +120,40 @@ async function main() {
   await writeFile(new URL('recipe-cats.json', outDir), JSON.stringify(rcat))
   console.log(`recipe-cats: ${Object.keys(rcat).length} entries`)
 
+  // ── 음악(앨범 이미지 포함 데이터맵) ───────────────────────
+  // Nookipedia엔 음악 엔드포인트가 없어 Norviah Music 시트로 합성 행을 만든다.
+  {
+    const rows = await fetchSheet('Music')
+    const music = {}
+    for (const r of rows) {
+      const k = norm(r.name)
+      if (!k) continue
+      music[k] = {
+        ko: validKo(r) || r.name,
+        buy: typeof r.buy === 'number' ? r.buy : null,
+        sell: typeof r.sell === 'number' ? r.sell : null,
+        image: r.albumImage || r.framedImage || null,
+        recipe: r.recipe ?? null,
+      }
+    }
+    await writeFile(new URL('music.json', outDir), JSON.stringify(music))
+    console.log(`music: ${Object.keys(music).length} entries (Music + 앨범 이미지)`)
+  }
+
+  // ── 내부구조 이름셋(분류기 전용) ──────────────────────────
+  // 가구 Housewares에 섞인 기둥·아일랜드 조리대·칸막이벽 등을 이름으로 분리.
+  {
+    const rows = await fetchSheet('Interior Structures')
+    const structures = {}
+    for (const r of rows) {
+      const k = norm(r.name)
+      if (!k) continue
+      structures[k] = validKo(r) || r.name
+    }
+    await writeFile(new URL('interior-structures.json', outDir), JSON.stringify(structures))
+    console.log(`interior-structures: ${Object.keys(structures).length} entries`)
+  }
+
   console.log('done.')
 }
 
