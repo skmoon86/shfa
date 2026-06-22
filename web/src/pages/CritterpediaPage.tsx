@@ -42,7 +42,7 @@ export function CritterpediaPage() {
   const [onlyNow, setOnlyNow] = useState(false)
   const [donateFilter, setDonateFilter] = useState<'all' | 'donated' | 'undonated'>('all')
   const [loc, setLoc] = useState('') // 선택된 채집장소(표시 라벨)
-  const [sortBy, setSortBy] = useState<'default' | 'name'>('default')
+  const [sortBy, setSortBy] = useState<'default' | 'name'>('name')
   const [onlyNoModel, setOnlyNoModel] = useState(false)
   const canSave = useCanSave()
   const { map, toggle } = useCritterpedia()
@@ -338,16 +338,6 @@ export function CritterpediaPage() {
                 )}
 
                 <div className="mt-auto flex gap-1.5 pt-2">
-                  {isCritter && (
-                    <ToggleButton
-                      label={ui.caught}
-                      active={st.caught}
-                      disabled={!canSave}
-                      onClick={() =>
-                        toggle.mutate({ category: rcat, entryId: r.name, field: 'caught' })
-                      }
-                    />
-                  )}
                   <ToggleButton
                     label={ui.donated}
                     active={st.donated}

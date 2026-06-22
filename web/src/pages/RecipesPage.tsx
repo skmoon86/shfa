@@ -34,7 +34,7 @@ export function RecipesPage() {
   const [source, setSource] = useState<string>('')
   const [rcats, setRcats] = useState<Set<string>>(new Set())
   const [learnFilter, setLearnFilter] = useState<'all' | 'learned' | 'unlearned'>('all')
-  const [sortBy, setSortBy] = useState<'default' | 'name'>('default')
+  const [sortBy, setSortBy] = useState<'default' | 'name'>('name')
   const [detail, setDetail] = useState<Recipe | null>(null)
   const canSave = useCanSave()
   const { learned, toggle } = useRecipeProgress()

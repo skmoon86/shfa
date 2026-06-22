@@ -38,7 +38,7 @@ export function ItemsPage() {
   const [q, setQ] = useState('')
   const [limit, setLimit] = useState(PAGE)
   const [event, setEvent] = useState<EventKey | ''>('') // 선택된 이벤트
-  const [sortBy, setSortBy] = useState<'default' | 'name'>('default')
+  const [sortBy, setSortBy] = useState<'default' | 'name'>('name')
   const [checks, setChecks] = useState<Set<Check>>(new Set())
   const [detail, setDetail] = useState<ItemRow | null>(null)
   const canSave = useCanSave()
