@@ -9,7 +9,7 @@ import { useKoNames } from '../hooks/useKoNames'
 import { DatePicker } from '../components/DatePicker'
 import { MonthCalendar, type DayMark } from '../components/MonthCalendar'
 import { Spinner } from '../components/states'
-import { tEvent, eventHemisphere } from '../i18n/ko'
+import { tEvent, eventHemisphere, eventIcon } from '../i18n/ko'
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -59,20 +59,21 @@ export function CalendarPage() {
         const h = eventHemisphere(e.event)
         return !h || h === hemi
       })
-      .map((e) => ({ day: Number(e.date.slice(8, 10)), label: tEvent(e.event) }))
+      .map((e) => ({ day: Number(e.date.slice(8, 10)), label: tEvent(e.event), icon: eventIcon(e.event) }))
       .filter((e) => e.label)
   }, [events, year, month, hemi])
 
   // 달력 셀 배지(거주 주민 생일 + 이벤트)
   const marks = useMemo(() => {
     const m: Record<string, DayMark> = {}
-    const set = (k: string, f: keyof DayMark) => {
-      m[k] = { ...(m[k] ?? {}), [f]: true }
-    }
     for (const v of residentBirthdays) {
-      set(toISODate(new Date(year, month, Number(v.birthday_day))), 'birthday')
+      const k = toISODate(new Date(year, month, Number(v.birthday_day)))
+      m[k] = { ...(m[k] ?? {}), birthday: true }
     }
-    for (const e of monthEvents) set(toISODate(new Date(year, month, e.day)), 'event')
+    for (const e of monthEvents) {
+      const k = toISODate(new Date(year, month, e.day))
+      m[k] = { ...(m[k] ?? {}), eventIcon: m[k]?.eventIcon ?? e.icon }
+    }
     return m
   }, [residentBirthdays, monthEvents, year, month])
 
@@ -82,12 +83,12 @@ export function CalendarPage() {
 
   // 이벤트 목록(이벤트 + 모든 주민 생일, 날짜순)
   const monthList = useMemo(() => {
-    const items: { day: number; label: string; kind: 'event' | 'birthday' }[] = [
-      ...monthEvents.map((e) => ({ day: e.day, label: e.label, kind: 'event' as const })),
+    const items: { day: number; label: string; icon: string }[] = [
+      ...monthEvents.map((e) => ({ day: e.day, label: e.label, icon: e.icon })),
       ...allBirthdays.map((b) => ({
         day: b.day,
         label: `${koV(b.name)} 생일`,
-        kind: 'birthday' as const,
+        icon: '🎂',
       })),
     ]
     return items.sort((a, b) => a.day - b.day || a.label.localeCompare(b.label, 'ko'))
@@ -101,7 +102,7 @@ export function CalendarPage() {
         <DatePicker />
         <div className="flex flex-wrap gap-2 text-sm">
           {selectedEvents.map((e, i) => (
-            <span key={`e${i}`} className="chip">🎉 {e.label}</span>
+            <span key={`e${i}`} className="chip">{e.icon} {e.label}</span>
           ))}
           {selectedBirthdays.map((v) => (
             <span key={v.name} className="chip">🎂 {koV(v.name)} 생일</span>
@@ -130,7 +131,7 @@ export function CalendarPage() {
               <li key={i} className="flex gap-2">
                 <span className="tabular-nums text-leaf-400">{it.day}일</span>
                 <span>
-                  {it.kind === 'birthday' ? '🎂' : '🎉'} {it.label}
+                  {it.icon} {it.label}
                 </span>
               </li>
             ))}

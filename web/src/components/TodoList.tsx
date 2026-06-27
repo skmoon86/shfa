@@ -10,7 +10,7 @@ import { TODO_PRESETS, presetKey, todoKey } from '../data/todoPresets'
 export function TodoList() {
   const { iso } = useSelectedDate()
   const canSave = useCanSave()
-  const { todos, add, remove } = useTodos()
+  const { todos, add, remove } = useTodos(iso)
   const { done, toggle } = useTodoCompletions(iso)
   const { prefs, update } = useUserPrefs()
   const [newTitle, setNewTitle] = useState('')

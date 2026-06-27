@@ -34,64 +34,35 @@ export const bucketLabel: Record<Bucket, string> = {
   other: '기타',
 }
 
-// 이벤트 분류(availability.note + 일부 from 기반). 획득방법 드롭다운을 대체.
+// 이벤트/시리즈 분류. availability(from/note) + item_series + 이름 + (제작 시)레시피 재료를 종합 판정.
+// 아이템 페이지 '이벤트' 드롭다운을 대체. 사용자 지정 33종 + 미매칭은 'etc'(드롭다운 미노출).
 export type EventKey =
-  | 'bunny' | 'festivale' | 'turkey' | 'toyday' | 'halloween' | 'valentine'
-  | 'wedding' | 'mayday' | 'fishing' | 'bugoff' | 'fireworks' | 'museum'
-  | 'countdown' | 'musicfest'
-  | 'mushroom' | 'cherry' | 'maple'
+  | 'valentine' | 'festivale' | 'bunny' | 'mayday' | 'museum' | 'wedding'
+  | 'fireworks' | 'halloween' | 'turkey' | 'toyday' | 'countdown'
+  | 'cherry' | 'shell' | 'acorn' | 'mushroom' | 'maple' | 'snow' | 'ornament'
+  | 'bugoff' | 'fishing' | 'celeste' | 'brewster' | 'gullivarrr' | 'pascal' | 'hotel'
+  | 'birthday' | 'mom'
   | 'sanrio' | 'mario' | 'zelda' | 'splatoon' | 'lego' | 'pocketcamp'
-  | 'celeste' | 'gullivarrr' | 'pascal' | 'hotel'
-  | 'spring' | 'summer' | 'fall' | 'winter' | 'seasonal'
   | 'etc'
 
-// 우선순위 = 매칭 순서(위가 우선). 명절·행사 > 자연 시즌 > 콜라보 > NPC/특수 > 계절 > 기타.
-const EVENT_RULES: [Exclude<EventKey, 'etc'>, RegExp][] = [
-  ['bunny', /bunny day/],
-  ['festivale', /festivale/],
-  ['turkey', /turkey day/],
-  ['toyday', /toy day/],
-  ['halloween', /halloween/],
-  ['valentine', /valentine/],
-  ['wedding', /wedding/],
-  ['mayday', /may day/],
-  ['fishing', /fishing tourney/],
-  ['bugoff', /bug-?off/],
-  ['fireworks', /fireworks/],
-  ['museum', /museum day/],
-  ['countdown', /countdown/],
-  ['musicfest', /music festival/],
-  ['mushroom', /mushroom/],
-  ['cherry', /cherry.?blossom/],
-  ['maple', /maple leaf/],
-  ['sanrio', /sanrio/],
-  ['mario', /mario/],
-  ['zelda', /zelda/],
-  ['splatoon', /splatoon/],
-  ['lego', /lego/],
-  ['pocketcamp', /pocket camp/],
-  ['celeste', /celeste|meteor shower|zodiac/],
-  ['gullivarrr', /gullivarrr/],
-  ['pascal', /pascal/],
-  ['hotel', /hotel souvenir/],
-  ['spring', /\bspring\b/],
-  ['summer', /\bsummer\b/],
-  ['fall', /\bfall\b/],
-  ['winter', /\bwinter\b/],
-  ['seasonal', /\bseasonal\b/],
+// 드롭다운 노출 순서(사용자 지정). 'etc'는 목록에서 제외(전체에서만 노출).
+export const EVENT_ORDER: EventKey[] = [
+  'valentine', 'festivale', 'bunny', 'mayday', 'museum', 'wedding',
+  'fireworks', 'halloween', 'turkey', 'toyday', 'countdown',
+  'cherry', 'shell', 'acorn', 'mushroom', 'maple', 'snow', 'ornament',
+  'bugoff', 'fishing', 'celeste', 'brewster', 'gullivarrr', 'pascal', 'hotel',
+  'birthday', 'mom',
+  'sanrio', 'mario', 'zelda', 'splatoon', 'lego', 'pocketcamp',
 ]
-
-// 드롭다운 노출 순서(고정 논리 순서) + 라벨
-export const EVENT_ORDER: EventKey[] = [...EVENT_RULES.map(([k]) => k), 'etc']
 export const itemEventLabel: Record<EventKey, string> = {
-  bunny: '부활절', festivale: '페스티벌', turkey: '추수감사절', toyday: '토이데이',
-  halloween: '핼러윈', valentine: '발렌타인데이', wedding: '웨딩 시즌', mayday: '메이데이',
-  fishing: '낚시 대회', bugoff: '곤충 채집 대회', fireworks: '불꽃놀이', museum: '국제 박물관의 날',
-  countdown: '카운트다운', musicfest: '뮤직 페스티벌',
-  mushroom: '버섯 시즌', cherry: '벚꽃 시즌', maple: '단풍 시즌',
+  valentine: '밸런타인데이', festivale: '카니발', bunny: '이스터(부활절)', mayday: '근로자의 날(메이데이)',
+  museum: '국제 박물관의 날', wedding: '웨딩 이벤트', fireworks: '불꽃 축제', halloween: '할로윈',
+  turkey: '추수감사절', toyday: '크리스마스', countdown: '새해 카운트다운',
+  cherry: '대나무&벚꽃', shell: '여름 조개껍데기', acorn: '도토리&솔방울', mushroom: '버섯',
+  maple: '단풍잎', snow: '눈사람', ornament: '오너먼트',
+  bugoff: '곤충채집대회', fishing: '낚시대회', celeste: '별똥별 부옥이', brewster: '카페 마스터',
+  gullivarrr: '해적 죠니', pascal: '해탈한', hotel: '호텔기념품', birthday: '생일', mom: '엄마',
   sanrio: '산리오', mario: '마리오', zelda: '젤다', splatoon: '스플래툰', lego: '레고', pocketcamp: '포켓캠프',
-  celeste: '부옥이 별똥별', gullivarrr: '해적 죠니', pascal: '해탈한', hotel: '호텔 기념품',
-  spring: '봄', summer: '여름', fall: '가을', winter: '겨울', seasonal: '시즌',
   etc: '기타',
 }
 
@@ -164,11 +135,13 @@ export interface ClassifyResult {
 
 const norm = (s?: string) => (s ?? '').toLowerCase().trim()
 
-// 모형: availability.from 이 저스틴(C.J.) 또는 레온(Flick)
+// 모형 160: 저스틴(C.J.)/레온(Flick)에게 "물고기/곤충 3마리 교환"으로 받는 모형.
+// 주의: 곤충채집대회(Bug-Off)·낚시대회(Fishing Tourney) 보상 가구도 C.J./Flick에서 오므로,
+// from 만으로 제외하면 정상 가구(개미집·생선 건조대 등)가 누락된다. note 가 "Trade in …" 인 행만 모형.
 function isModelRow(row: { availability?: Availability[] }): boolean {
   return (row.availability ?? []).some((a) => {
     const f = norm(a.from)
-    return f === 'c.j.' || f === 'flick'
+    return (f === 'c.j.' || f === 'flick') && /^trade in\b/.test(norm(a.note))
   })
 }
 
@@ -179,24 +152,69 @@ function inCatalog(row: { availability?: Availability[]; buy?: PriceEntry[] }): 
   )
 }
 
-// availability.note(+from)를 모아 위키 마크업 제거 후 우선순위 키워드로 이벤트 판정.
-function eventOf(row: { availability?: Availability[] }): EventKey {
-  const parts: string[] = []
-  for (const a of row.availability ?? []) {
-    if (a.from) parts.push(a.from)
-    if (a.note) parts.push(a.note)
-  }
-  if (parts.length === 0) return 'etc'
-  const text = parts.join(' | ').toLowerCase().replace(/\[\[|\]\]/g, '')
-  for (const [key, re] of EVENT_RULES) if (re.test(text)) return key
+// 아이템 → 이벤트/시리즈 키. availability(from/note) + item_series + 이름 + 제작 재료를 종합.
+// 우선순위 = EVENT_ORDER(사용자 지정). 위에서부터 첫 매칭 채택.
+function eventOf(
+  row: { availability?: Availability[]; item_series?: string; name?: string },
+  recipeMats: Map<string, string[]>,
+): EventKey {
+  const fn = (row.availability ?? [])
+    .flatMap((a) => [a.from, a.note])
+    .filter(Boolean)
+    .join(' | ')
+    .toLowerCase()
+    .replace(/\[\[|\]\]/g, '')
+  const series = norm(row.item_series)
+  const name = norm(row.name)
+  const mats = (recipeMats.get(name) ?? []).join(' | ').toLowerCase()
+  const f = (...res: RegExp[]) => res.some((re) => re.test(fn)) // from/note
+  const m = (re: RegExp) => re.test(mats) // 제작 재료
+  const s = (...vals: string[]) => vals.some((v) => series.includes(v)) // item_series
+
+  if (f(/valentine/)) return 'valentine'
+  if (f(/festivale|pav[eé]/) || s('festivale')) return 'festivale'
+  if (f(/bunny day|zipper/) || s('bunny day')) return 'bunny'
+  if (f(/may day/)) return 'mayday'
+  if (f(/museum day/)) return 'museum'
+  if (f(/wedding|\bcyrus\b|\breese\b/) || s('wedding')) return 'wedding'
+  if (f(/fireworks/)) return 'fireworks'
+  if (f(/halloween|\bjack\b/) || s('spooky')) return 'halloween'
+  if (f(/turkey day|franklin/) || s('turkey day')) return 'turkey'
+  if (f(/toy day|jingle/)) return 'toyday'
+  if (f(/countdown/)) return 'countdown'
+  if (m(/cherry.?blossom|young spring bamboo|bamboo (?:piece|shoot)/) || s('cherry blossom', 'bamboo') || f(/cherry.?blossom/) || /\bbamboo\b/.test(name)) return 'cherry'
+  if (m(/summer shell/) || s('shell') || f(/summer shell/)) return 'shell'
+  if (m(/\bacorn\b|pine cone/) || s("tree's bounty", 'leaves') || f(/\bacorn\b|pine cone/)) return 'acorn'
+  if (m(/mushroom/) || s('mush') || f(/mushroom/)) return 'mushroom'
+  if (m(/maple leaf/) || f(/maple leaf/)) return 'maple'
+  if (m(/snowflake/) || s('frozen') || f(/snowflake|snowboy/)) return 'snow'
+  if (m(/ornament/) || s('festive') || f(/festive season/)) return 'ornament'
+  if (f(/bug-?off/)) return 'bugoff'
+  if (f(/fishing tourney/)) return 'fishing'
+  if (f(/\bceleste\b|meteor shower|zodiac/) || s('stars', 'zodiac')) return 'celeste'
+  if (f(/\bbrewster\b|caf[eé]/)) return 'brewster'
+  if (f(/gullivarrr/)) return 'gullivarrr'
+  if (f(/\bpascal\b/)) return 'pascal'
+  if (f(/hotel souvenir|hotel room/)) return 'hotel'
+  if (f(/\bbirthday\b/)) return 'birthday'
+  if (f(/\bmom\b/)) return 'mom'
+  if (f(/sanrio/) || s('cinnamoroll', 'hello kitty', 'kerokerokeroppi', 'my melody', 'pompompurin', 'kiki & lala')) return 'sanrio'
+  if (s('mario') || f(/super mario|\bmario\b/)) return 'mario'
+  if (s('the legend of zelda') || f(/zelda/)) return 'zelda'
+  if (s('splatoon') || f(/splatoon/)) return 'splatoon'
+  if (s('lego') || f(/lego/) || /lego/.test(name)) return 'lego'
+  if (f(/pocket camp/)) return 'pocketcamp'
   return 'etc'
 }
 
 export function classify(input: ClassifyInput): ClassifyResult {
   const { furniture, clothing, interior, items, tools, gyroids, music, art, recipes, structureNames } = input
 
-  // 레시피 이름셋(__hasRecipe 판정)
+  // 레시피 이름셋(__hasRecipe 판정) + 제작결과명→재료명 맵(시즌 이벤트 판정용)
   const recipeNames = new Set(recipes.map((r) => norm(r.name)))
+  const recipeMatsByName = new Map<string, string[]>(
+    recipes.map((r) => [norm(r.name), (r.materials ?? []).map((mat) => mat.name)]),
+  )
   // 미술품 이름셋(furniture에서 제외). 진품/위작 모두 이름 매칭.
   const artNames = new Set(art.map((a) => norm(a.name)))
 
@@ -209,7 +227,7 @@ export function classify(input: ClassifyInput): ClassifyResult {
     __reformable: row.customizable === true,
     __hasRecipe: recipeNames.has(norm(row.name)),
     __catalogable: inCatalog(row),
-    __event: eventOf(row),
+    __event: eventOf(row, recipeMatsByName),
   })
 
   // ── 가구 ──

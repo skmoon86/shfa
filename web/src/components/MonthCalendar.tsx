@@ -2,7 +2,7 @@ import { useSelectedDate, toISODate } from '../context/DateContext'
 
 export interface DayMark {
   birthday?: boolean // 거주 주민 생일
-  event?: boolean // 시즌 이벤트
+  eventIcon?: string // 시즌 이벤트(종류·시작/종료별 이모지)
   critter?: boolean // 채집 가능 생물 변동(이 달 신규 등)
   recipe?: boolean // 시즌 레시피
 }
@@ -69,7 +69,7 @@ export function MonthCalendar({
               {m && (
                 <span className="mt-auto flex flex-wrap justify-center gap-0.5 text-[8px] leading-none">
                   {m.birthday && <span title="생일">🎂</span>}
-                  {m.event && <span title="이벤트">🎉</span>}
+                  {m.eventIcon && <span title="이벤트">{m.eventIcon}</span>}
                   {m.recipe && <span title="시즌 레시피">🔨</span>}
                   {m.critter && <span title="채집">🐟</span>}
                 </span>

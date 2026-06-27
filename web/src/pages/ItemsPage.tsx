@@ -68,13 +68,6 @@ export function ItemsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store.rows, [...selected].join(',')])
 
-  // 이벤트 드롭다운 옵션(현재 버킷에 실제 존재하는 이벤트만, 고정 논리 순서)
-  const eventOptions = useMemo(() => {
-    const present = new Set<EventKey>()
-    for (const r of bucketRows) present.add(r.__event)
-    return EVENT_ORDER.filter((e) => present.has(e))
-  }, [bucketRows])
-
   const map = store.itemMap
 
   const filtered = useMemo(() => {
@@ -144,7 +137,7 @@ export function ItemsPage() {
             className="rounded-xl border border-leaf-200 bg-white px-3 py-2 text-sm dark:border-leaf-700 dark:bg-leaf-800"
           >
             <option value="">이벤트 전체</option>
-            {eventOptions.map((e) => (
+            {EVENT_ORDER.map((e) => (
               <option key={e} value={e}>
                 {itemEventLabel[e]}
               </option>

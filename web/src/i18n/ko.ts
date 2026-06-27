@@ -112,9 +112,9 @@ export const sourceLabel: Record<string, string> = {
   Pascal: '해탈한',
   Jingle: '룰루',
   Zipper: '토빗',
-  'Pavé': '파베',
+  'Pavé': '베르리나',
   Jack: '펌킹',
-  Niko: '니코',
+  Niko: '해피홈 파라다이스',
   Daisy: '무파니',
   Mom: '엄마',
   // 이벤트
@@ -401,4 +401,27 @@ export function tEvent(nameRaw?: string): string {
   if (term) return term + suffix
   // 알 수 없는 minor 이벤트는 숨김(영문 노출 방지)
   return ''
+}
+
+// 캘린더 이벤트 앞 작은 아이콘(이모지). 이벤트 원문(영문)으로 종류·시작/종료 판정.
+// 특정 종류(낚시/곤충/계절 시작)는 전용 아이콘이 시작/종료 화살표보다 우선.
+export function eventIcon(nameRaw?: string): string {
+  if (!nameRaw) return '🎉'
+  const lower = nameRaw
+    .replace(/[\uD800-\uDFFF]/g, '')
+    .replace(/\s*\((?:northern|southern) hemisphere\)/i, '')
+    .toLowerCase()
+    .trim()
+  // 전용 아이콘(종류 우선)
+  if (/fishing tourney/.test(lower)) return '🎣' // 낚시대회 → 낚싯대
+  if (/bug-?off/.test(lower)) return '🪲' // 곤충채집대회 → 잠자리채(대체 이모지)
+  let m: RegExpExecArray | null
+  if ((m = /(first|last) day of (?:the )?(spring|summer|fall|winter)\b/.exec(lower))) {
+    if (m[1] === 'first') return { spring: '🌸', summer: '☀️', fall: '🍁', winter: '⛄' }[m[2]]! // 계절 시작
+    return '◀️' // 계절 마지막
+  }
+  // 시작/종료 방향 화살표
+  if (/(begins?|become available)$/.test(lower) || /^(?:.*\s)?first day\b/.test(lower)) return '▶️' // START
+  if (/(ends?|are available)$/.test(lower) || /last day\b/.test(lower)) return '◀️' // END
+  return '🎉'
 }

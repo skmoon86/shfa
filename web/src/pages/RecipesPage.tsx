@@ -11,6 +11,7 @@ import { ProgressBar } from '../components/ProgressBar'
 import { CategoryTabs } from '../components/CategoryTabs'
 import { RecipeDetailModal } from '../components/RecipeDetailModal'
 import { ui, tSource } from '../i18n/ko'
+import { RECIPE_CAT_ORDER, recipeCatLabel, recipeCatOf } from '../lib/recipeCats'
 import { fmtBells } from '../lib/format'
 
 // 레시피 카테고리 = 제작 결과 아이템의 버킷(itemBuckets). 단 도구 엔드포인트 산출물은 '도구'로 분리.
@@ -31,7 +32,7 @@ const RECIPE_CATS: { code: string; label: string }[] = [
 
 export function RecipesPage() {
   const [q, setQ] = useState('')
-  const [source, setSource] = useState<string>('')
+  const [cat, setCat] = useState<string>('') // 입수처 카테고리(recipeCats)
   const [rcats, setRcats] = useState<Set<string>>(new Set())
   const [learnFilter, setLearnFilter] = useState<'all' | 'learned' | 'unlearned'>('all')
   const [sortBy, setSortBy] = useState<'default' | 'name'>('name')
@@ -48,8 +49,8 @@ export function RecipesPage() {
   })
   const data = query.data ?? []
 
-  // 레시피명 → 대분류 코드(제작 결과 아이템 버킷; 도구 엔드포인트 산출물은 '도구', 음악/토용은 '기타')
-  const recipeCatOf = useMemo(() => {
+  // 레시피명 → 종류 탭 코드(제작 결과 아이템 버킷; 도구 엔드포인트 산출물은 '도구', 음악/토용은 '기타')
+  const itemCatOf = useMemo(() => {
     const m = new Map<string, string>()
     for (const r of store.rows) {
       const code =
@@ -70,13 +71,6 @@ export function RecipesPage() {
     return store.rows.find((r) => r.name.toLowerCase().trim() === key) ?? null
   }, [detail, store.rows])
 
-  // 입수처 목록
-  const sources = useMemo(() => {
-    const set = new Set<string>()
-    for (const r of data) for (const a of r.availability ?? []) if (a.from) set.add(a.from)
-    return [...set].sort((a, b) => tSource(a).localeCompare(tSource(b), 'ko'))
-  }, [data])
-
   const filtered = useMemo(() => {
     let rows = data
     if (q.trim()) {
@@ -85,11 +79,11 @@ export function RecipesPage() {
         (r) => r.name.toLowerCase().includes(l) || ko(r.name).toLowerCase().includes(l),
       )
     }
-    if (source) {
-      rows = rows.filter((r) => (r.availability ?? []).some((a) => a.from === source))
+    if (cat) {
+      rows = rows.filter((r) => recipeCatOf(r) === cat)
     }
     if (rcats.size) {
-      rows = rows.filter((r) => rcats.has(recipeCatOf(r.name)))
+      rows = rows.filter((r) => rcats.has(itemCatOf(r.name)))
     }
     if (learnFilter === 'learned') rows = rows.filter((r) => learned.has(r.name))
     else if (learnFilter === 'unlearned') rows = rows.filter((r) => !learned.has(r.name))
@@ -97,7 +91,7 @@ export function RecipesPage() {
       rows = [...rows].sort((a, b) => ko(a.name).localeCompare(ko(b.name), 'ko'))
     }
     return rows
-  }, [data, q, source, rcats, learnFilter, learned, ko, recipeCatOf, sortBy])
+  }, [data, q, cat, rcats, learnFilter, learned, ko, itemCatOf, sortBy])
 
   const toggleCat = (c: string) =>
     setRcats((prev) => {
@@ -126,14 +120,14 @@ export function RecipesPage() {
         <div className="flex flex-wrap items-center gap-3">
           <SearchBar value={q} onChange={setQ} />
           <select
-            value={source}
-            onChange={(e) => setSource(e.target.value)}
+            value={cat}
+            onChange={(e) => setCat(e.target.value)}
             className="rounded-xl border border-leaf-200 bg-white px-3 py-2 text-sm dark:border-leaf-700 dark:bg-leaf-800"
           >
             <option value="">{ui.source}: 전체</option>
-            {sources.map((s) => (
-              <option key={s} value={s}>
-                {tSource(s)}
+            {RECIPE_CAT_ORDER.map((c) => (
+              <option key={c} value={c}>
+                {recipeCatLabel[c]}
               </option>
             ))}
           </select>

@@ -13,7 +13,7 @@ import { ProgressBar } from '../components/ProgressBar'
 import { DatePicker } from '../components/DatePicker'
 import { TodoList } from '../components/TodoList'
 import { VillagerDetailModal } from '../components/VillagerDetailModal'
-import { critterCategory, tEvent, eventHemisphere, ui } from '../i18n/ko'
+import { critterCategory, tEvent, eventHemisphere, eventIcon, ui } from '../i18n/ko'
 import { tr, species as speciesKo } from '../i18n/terms'
 
 const CRITTER_CATS = ['fish', 'bugs', 'sea', 'fossils', 'art'] as const
@@ -58,8 +58,8 @@ export function HomePage() {
           const h = eventHemisphere(e.event)
           return !h || h === prefs.hemisphere
         })
-        .map((e) => tEvent(e.event))
-        .filter(Boolean),
+        .map((e) => ({ label: tEvent(e.event), icon: eventIcon(e.event) }))
+        .filter((e) => e.label),
     [events, iso, prefs.hemisphere],
   )
 
@@ -88,8 +88,8 @@ export function HomePage() {
         <DatePicker />
         <div className="flex flex-wrap gap-2 text-sm">
           {todayEvents.length > 0 ? (
-            todayEvents.map((label, i) => (
-              <span key={i} className="chip">🎉 {label}</span>
+            todayEvents.map((e, i) => (
+              <span key={i} className="chip">{e.icon} {e.label}</span>
             ))
           ) : (
             <span className="text-leaf-400">오늘은 특별한 이벤트가 없어요.</span>

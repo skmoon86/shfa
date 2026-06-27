@@ -9,6 +9,7 @@ export const TODO_PRESETS: string[] = [
   '상점·옷가게 방문',
   '주민 대화하기',
   '꽃 물주기',
+  '돈나무 심기',
 ]
 
 export const presetKey = (name: string) => `preset:${name}`

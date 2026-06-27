@@ -9,11 +9,12 @@ export interface Todo {
   sort_order: number
 }
 
-export function useTodos() {
+// 직접추가 미션은 추가한 '그 날짜'(the_date)에만 노출. 프리셋(자동등록)은 날짜무관.
+export function useTodos(iso: string) {
   const { user } = useAuth()
   const qc = useQueryClient()
   const uid = user?.id
-  const key = ['todos', uid]
+  const key = ['todos', uid, iso]
 
   const query = useQuery({
     queryKey: key,
@@ -23,6 +24,7 @@ export function useTodos() {
         .from('todos')
         .select('id, title, sort_order')
         .eq('active', true)
+        .eq('the_date', iso)
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true })
       if (error) throw error
@@ -38,6 +40,7 @@ export function useTodos() {
         user_id: uid,
         title,
         sort_order: cur.length,
+        the_date: iso,
       })
       if (error) throw error
     },
