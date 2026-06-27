@@ -79,3 +79,32 @@ supabase db push --password <DB비번>
 - 변경 후 `cd web && npm run build`로 타입/빌드 검증.
 - 커밋 메시지는 한국어. push는 skmoon86 계정으로(원격 URL에 사용자명 포함: `https://skmoon86@github.com/...`) → Vercel 자동 배포.
 - **DB 마이그레이션은 Claude가 직접 적용**: 마이그레이션 추가 후 `supabase db push --password <DB비번>` 실행(비번은 `웹서비스관련정보.txt`). 사용자에게 미루지 말 것. 마이그레이션 SQL은 재실행 가능하게 멱등(`if not exists`, `drop policy if exists`)으로 작성.
+
+---
+
+## 최근 작업 기록 — 2026-06-27 (resume point)
+
+> **배포 반영 = `main`.** Vercel Production은 `main` 브랜치를 빌드한다(`feature/six-features-rewrite`는 Preview). 작업 후 반드시 `main`에 올려야 사용자에게 보인다.
+> **⚠️ 작업 폴더 함정:** Claude Code 세션 기본 cwd가 `E:\mail\HMS`(무관한 메일 프로젝트)일 수 있다. 이 저장소 명령은 **반드시 `E:\fa`를 대상**으로 — `cd /e/fa && …` 또는 `git -C E:/fa …`. (예: `git -C E:/fa push origin main`)
+> 현재 `main` == `feature/six-features-rewrite` == `8116ee8`(원격 동기화 완료).
+
+### 이번 라운드에 한 일 (요청 7건 + 버그수정)
+1. **아이템 이벤트 필터 재구성** — `src/lib/itemBuckets.ts`: `EventKey`/`EVENT_ORDER`(지정 33종 순서)/`itemEventLabel` 재정의. `eventOf(row, recipeMats)`가 `availability(from/note)` + `item_series` + 이름 + **제작 레시피 재료**(시즌 판정)까지 종합. `ItemsPage`의 '이벤트' 드롭다운은 `EVENT_ORDER` 전체를 고정 순서로 노출.
+2. **DIY 입수처 필터 재구성** — 신규 `src/lib/recipeCats.ts`: `RECIPE_CAT_ORDER`(지정 36종)/`recipeCatLabel`/`recipeCatOf(recipe)`. `RecipesPage`의 입수처 드롭다운을 이걸로 교체(종류 탭 `RECIPE_CATS`는 유지). 빈 카테고리(불꽃축제/NPC:레온·저스틴·엄마)는 데이터에 레시피가 0건이라 비어 있음(정상).
+3. **모형 제외 버그 수정**(누락 아이템) — `itemBuckets.ts` `isModelRow`: 기존엔 from=C.J./Flick면 전부 제외 → **곤충채집대회(Bug-Off)·낚시대회(Fishing Tourney) 보상 가구(개미집·생선 건조대 등)까지 사라짐**. 이제 `note`가 `"Trade in …"`인 진짜 모형 160개만 제외.
+4. **캘린더 이벤트 아이콘** — `ko.ts` `eventIcon(raw)`: 시작 ▶️/종료 ◀️, 낚시 🎣, 곤충 🪲, 봄🌸·여름☀️·가을🍁·겨울⛄. `CalendarPage`/`HomePage`/`MonthCalendar`(DayMark.eventIcon) 적용.
+5. **할일 날짜 스코프** — 직접추가 todo는 추가한 날짜에만 노출. `migrations/0005_todo_date.sql`(todos에 `the_date` 컬럼 + 백필 + 인덱스, **원격 적용 완료**), `useTodos(iso)`가 `the_date`로 저장·조회. 프리셋(자동등록)은 날짜무관 유지.
+6. **오늘 할일 '돈나무 심기' 추가** — `data/todoPresets.ts` `TODO_PRESETS`.
+7. **신규 프리셋 사라짐 버그 수정** — `enabledPresets`(허용목록)에 없는 신규 프리셋이 prefs 로드 후 필터링돼 '나왔다 사라짐'. `todoPresets.ts`에 `LEGACY_PRESETS`(도입 당시 8종) 추가, `TodoList`의 `visiblePresets`는 *레거시 외(신규) 프리셋은 허용목록과 무관하게 항상 노출*. (제약: 레거시 허용목록 사용자는 신규 프리셋을 ⚙️로 숨길 수 없음 — 추후 denylist 전환 시 해소.)
+8. **이름 매핑 수정** — `ko.ts` `sourceLabel`: `'Pavé'→'베르리나'`, `Niko→'해피홈 파라다이스'`(기존 파베/니코 오표기).
+9. **영문 노출 한글명 162건 보강** — `public/ko/{furniture,clothing,interior,items,tools,photos}.json`에 레고/젤다/스플래툰/호텔/닌텐도 콘솔 등 추가.
+
+### 누락 아이템 진단 결론 (중요)
+- 실데이터 대조 결과 **사과·체리(과일)·침엽수 묘목·버섯·나뭇가지 등 '수집 가능한 형태'는 Nookipedia API에 있고 새 코드에서 정상 표시**(사과=음식 카테고리, 음식 총 32종 중 포함). 안 보였던 건 프로덕션이 옛 버전이었거나 PWA 캐시 때문.
+- **진짜 누락 = '심어진 형태'**: `cedar tree`(침엽수 나무)·`apple tree`(사과나무)·꽃 모종(`*-rose plant` 등 ~40)·관목(`*bush` ~15)은 **Nookipedia API에 아예 없음**(게임 내 도감 수집 대상도 아님). `public/ko/items.json`엔 한글명이 있으나 API가 안 줘서 표시 불가.
+- 진단 방법: `web/.env` 읽어 프록시(`/functions/v1/<fn>/nh/...`) 호출 → `public/ko/*.json` 키와 대조(스크래치패드 노드 스크립트). 모형/위작 제외 로직은 `classify` 참조.
+
+### 남은 일 / TODO
+- [ ] **프로덕션에서 사과·체리 표시 최종 확인**: 프로덕션이 새 코드(main 8116ee8)인데도 안 보이면 원인은 **PWA 서비스워커 캐시**. F12→Application→Service workers→Unregister + Storage→Clear site data 후 재확인. (코드/데이터상으로는 정상.)
+- [ ] **(선택) '심어진 형태' 자연물 추가**: 침엽수 나무·사과나무·꽃 모종·관목 등을 보여주려면 별도 번들 데이터(`public/data/extra-items.json` 등) 필요 — Nookipedia에 없어 이미지 수집이 관건. 사용자 결정 대기.
+- 참고: ESLint는 기존부터 일부 규칙 위반(예: `[...selected].join(',')` deps, `a ? b : c` 표현식 statement) 존재 — 이번 작업이 새로 만든 건 아님. `npm run build`(tsc)는 통과.
