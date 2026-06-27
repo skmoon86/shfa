@@ -12,5 +12,18 @@ export const TODO_PRESETS: string[] = [
   '돈나무 심기',
 ]
 
+// enabledPresets(허용목록) 기능 도입 당시 존재하던 프리셋. 이후 추가분(예: 돈나무 심기)은
+// 허용목록과 무관하게 항상 노출 → 기존 커스터마이즈 사용자에게도 신규 프리셋이 사라지지 않음.
+export const LEGACY_PRESETS: string[] = [
+  '출석체크',
+  '해변 레시피',
+  '주민 레시피',
+  '마일미션',
+  '풍선 터뜨리기',
+  '상점·옷가게 방문',
+  '주민 대화하기',
+  '꽃 물주기',
+]
+
 export const presetKey = (name: string) => `preset:${name}`
 export const todoKey = (id: string) => `todo:${id}`

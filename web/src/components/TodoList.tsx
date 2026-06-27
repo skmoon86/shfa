@@ -4,7 +4,7 @@ import { useTodos } from '../hooks/useTodos'
 import { useTodoCompletions } from '../hooks/useTodos'
 import { useUserPrefs } from '../hooks/useUserPrefs'
 import { useCanSave } from './Toggle'
-import { TODO_PRESETS, presetKey, todoKey } from '../data/todoPresets'
+import { TODO_PRESETS, LEGACY_PRESETS, presetKey, todoKey } from '../data/todoPresets'
 
 // 선택 날짜 기준 To-do 체크리스트(프리셋 8 + 직접 추가). 홈 상단에 표시.
 export function TodoList() {
@@ -16,9 +16,10 @@ export function TodoList() {
   const [newTitle, setNewTitle] = useState('')
   const [editPresets, setEditPresets] = useState(false)
 
-  const visiblePresets = prefs.enabledPresets.length
-    ? TODO_PRESETS.filter((p) => prefs.enabledPresets.includes(p))
-    : TODO_PRESETS
+  // 허용목록이 없으면 전체 노출. 있으면 허용된 레거시 프리셋 + 신규 프리셋(레거시 외)은 항상 노출.
+  const visiblePresets = TODO_PRESETS.filter(
+    (p) => !prefs.enabledPresets.length || prefs.enabledPresets.includes(p) || !LEGACY_PRESETS.includes(p),
+  )
 
   const togglePresetVisible = (name: string) => {
     const base = prefs.enabledPresets.length ? prefs.enabledPresets : [...TODO_PRESETS]
