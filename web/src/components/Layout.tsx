@@ -62,6 +62,15 @@ export function Layout() {
           </nav>
 
           <div className="ml-auto flex items-center gap-2">
+            {user && (
+              <NavLink
+                to="/settings"
+                className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-leaf-100 dark:hover:bg-leaf-700"
+                title={nav.settings}
+              >
+                ⚙️
+              </NavLink>
+            )}
             <button
               onClick={toggle}
               className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-leaf-100 dark:hover:bg-leaf-700"

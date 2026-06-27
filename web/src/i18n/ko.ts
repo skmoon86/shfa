@@ -42,6 +42,48 @@ export const nav = {
   items: '아이템',
   recipes: '레시피',
   villagers: '주민',
+  settings: '설정',
+}
+
+// 설정 · 데이터 관리 페이지
+export const settings = {
+  title: '데이터 관리',
+  intro:
+    '동물의 숲 데이터를 한 번 받아 저장해두고 사용합니다. 게임 업데이트 등으로 데이터가 바뀌면 아래 버튼으로 갱신하세요.',
+  loginRequired: '데이터를 갱신하려면 로그인하세요.',
+  refreshAll: '전체 데이터 갱신',
+  refreshing: '갱신 중…',
+  lastFetched: '마지막 갱신',
+  countLabel: '개수',
+  never: '아직 없음',
+  doneAll: '갱신 완료',
+  failed: '실패',
+  retry: '재시도',
+}
+
+// nook_dataset 엔드포인트 → 한글 라벨 (events 저장키는 'events:YYYY')
+export const datasetLabels: Record<string, string> = {
+  fish: '물고기',
+  bugs: '곤충',
+  sea: '해산물',
+  fossils: '화석',
+  art: '미술품',
+  recipes: 'DIY 레시피',
+  villagers: '주민',
+  furniture: '가구',
+  clothing: '의류',
+  interior: '실내장식',
+  items: '잡화',
+  tools: '도구',
+  photos: '사진',
+  gyroids: '자이로이드',
+  events: '행사',
+}
+
+// 저장키('fish' 또는 'events:2026')를 한글 라벨로
+export function datasetLabel(key: string): string {
+  if (key.startsWith('events:')) return `${datasetLabels.events} (${key.slice(7)})`
+  return datasetLabels[key] ?? key
 }
 
 // 도감 카테고리

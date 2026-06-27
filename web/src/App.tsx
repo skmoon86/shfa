@@ -6,6 +6,7 @@ import { CritterpediaPage } from './pages/CritterpediaPage'
 import { ItemsPage } from './pages/ItemsPage'
 import { RecipesPage } from './pages/RecipesPage'
 import { VillagersPage } from './pages/VillagersPage'
+import { SettingsPage } from './pages/SettingsPage'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="items" element={<ItemsPage />} />
         <Route path="recipes" element={<RecipesPage />} />
         <Route path="villagers" element={<VillagersPage />} />
+        <Route path="settings" element={<SettingsPage />} />
         <Route
           path="*"
           element={<div className="py-16 text-center">페이지를 찾을 수 없어요</div>}

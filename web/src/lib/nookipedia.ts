@@ -332,38 +332,69 @@ async function nookFetch<T>(path: string, params?: QueryParams): Promise<T> {
   return res.json() as Promise<T>
 }
 
-// ── 카테고리별 API ────────────────────────────────────────
+// ── 저장본(nook_dataset) 우선 읽기, 없으면 라이브 프록시 폴백 ──
+// 평소엔 Supabase에 저장된 스냅샷을 직접 읽어 Nookipedia를 매번 치지 않는다.
+// 저장본이 없으면(첫 갱신 전·행 누락) 기존 프록시 라이브 호출로 폴백 → 무중단.
+async function datasetFetch<T>(endpoint: string, live: () => Promise<T>): Promise<T> {
+  try {
+    const { data, error } = await supabase
+      .from('nook_dataset')
+      .select('data')
+      .eq('endpoint', endpoint)
+      .maybeSingle()
+    if (!error && data?.data != null) return data.data as T
+  } catch {
+    /* 저장본 조회 실패 → 라이브 폴백 */
+  }
+  return live()
+}
+
+// 화석 라이브 폴백: 그룹 응답을 개별 조각으로 평탄화(저장본은 이미 평탄화되어 있음)
+async function fetchFossilsLive(): Promise<Fossil[]> {
+  const groups = await nookFetch<FossilGroupRaw[]>('nh/fossils/all')
+  return groups.flatMap((g) =>
+    (g.fossils ?? []).map((f) => ({
+      name: f.name,
+      url: f.url,
+      image_url: f.image_url,
+      sell: f.sell,
+      fossil_group: g.name,
+      width: f.width,
+      length: f.length,
+      colors: f.colors,
+    })),
+  )
+}
+
+// ── 카테고리별 API (저장본 우선) ──────────────────────────────
 export const nookipedia = {
-  fish: () => nookFetch<Critter[]>('nh/fish'),
-  bugs: () => nookFetch<Critter[]>('nh/bugs'),
-  sea: () => nookFetch<Critter[]>('nh/sea'),
-  // 그룹 응답을 개별 화석 조각으로 평탄화
-  fossils: async (): Promise<Fossil[]> => {
-    const groups = await nookFetch<FossilGroupRaw[]>('nh/fossils/all')
-    return groups.flatMap((g) =>
-      (g.fossils ?? []).map((f) => ({
-        name: f.name,
-        url: f.url,
-        image_url: f.image_url,
-        sell: f.sell,
-        fossil_group: g.name,
-        width: f.width,
-        length: f.length,
-        colors: f.colors,
-      })),
-    )
-  },
-  art: () => nookFetch<Art[]>('nh/art'),
-  recipes: () => nookFetch<Recipe[]>('nh/recipes'),
+  fish: () => datasetFetch<Critter[]>('fish', () => nookFetch<Critter[]>('nh/fish')),
+  bugs: () => datasetFetch<Critter[]>('bugs', () => nookFetch<Critter[]>('nh/bugs')),
+  sea: () => datasetFetch<Critter[]>('sea', () => nookFetch<Critter[]>('nh/sea')),
+  fossils: () => datasetFetch<Fossil[]>('fossils', fetchFossilsLive),
+  art: () => datasetFetch<Art[]>('art', () => nookFetch<Art[]>('nh/art')),
+  recipes: () => datasetFetch<Recipe[]>('recipes', () => nookFetch<Recipe[]>('nh/recipes')),
   // 주민은 게임 공통 엔드포인트(/villagers). NH 한정 + NH 상세 포함.
   villagers: (params?: QueryParams) =>
-    nookFetch<Villager[]>('villagers', { game: 'NH', nhdetails: true, ...params }),
-  furniture: (params?: QueryParams) => nookFetch<Furniture[]>('nh/furniture', params),
-  clothing: (params?: QueryParams) => nookFetch<Clothing[]>('nh/clothing', params),
-  interior: (params?: QueryParams) => nookFetch<Interior[]>('nh/interior', params),
-  items: (params?: QueryParams) => nookFetch<Item[]>('nh/items', params),
-  tools: (params?: QueryParams) => nookFetch<Tool[]>('nh/tools', params),
-  photos: (params?: QueryParams) => nookFetch<Photo[]>('nh/photos', params),
-  gyroids: (params?: QueryParams) => nookFetch<Gyroid[]>('nh/gyroids', params),
-  events: (params?: QueryParams) => nookFetch<NHEvent[]>('nh/events', params),
+    datasetFetch<Villager[]>('villagers', () =>
+      nookFetch<Villager[]>('villagers', { game: 'NH', nhdetails: true, ...params }),
+    ),
+  furniture: (params?: QueryParams) =>
+    datasetFetch<Furniture[]>('furniture', () => nookFetch<Furniture[]>('nh/furniture', params)),
+  clothing: (params?: QueryParams) =>
+    datasetFetch<Clothing[]>('clothing', () => nookFetch<Clothing[]>('nh/clothing', params)),
+  interior: (params?: QueryParams) =>
+    datasetFetch<Interior[]>('interior', () => nookFetch<Interior[]>('nh/interior', params)),
+  items: (params?: QueryParams) =>
+    datasetFetch<Item[]>('items', () => nookFetch<Item[]>('nh/items', params)),
+  tools: (params?: QueryParams) =>
+    datasetFetch<Tool[]>('tools', () => nookFetch<Tool[]>('nh/tools', params)),
+  photos: (params?: QueryParams) =>
+    datasetFetch<Photo[]>('photos', () => nookFetch<Photo[]>('nh/photos', params)),
+  gyroids: (params?: QueryParams) =>
+    datasetFetch<Gyroid[]>('gyroids', () => nookFetch<Gyroid[]>('nh/gyroids', params)),
+  events: (params?: QueryParams) =>
+    datasetFetch<NHEvent[]>(`events:${params?.year ?? ''}`, () =>
+      nookFetch<NHEvent[]>('nh/events', params),
+    ),
 }
