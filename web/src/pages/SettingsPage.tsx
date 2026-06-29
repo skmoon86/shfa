@@ -28,13 +28,38 @@ async function snapshotOne(query: string, token: string): Promise<DatasetMeta> {
 }
 
 export function SettingsPage() {
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
   const queryClient = useQueryClient()
 
   const [running, setRunning] = useState(false)
   const [progress, setProgress] = useState<{ cur: number; total: number; label: string } | null>(null)
   const [results, setResults] = useState<Record<string, Status>>({})
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [clearing, setClearing] = useState(false)
+  const [cacheErr, setCacheErr] = useState<string | null>(null)
+
+  // PWA 서비스워커·캐시스토리지·메모리 캐시를 비우고 새로고침.
+  // (로그인 세션은 localStorage에 있으므로 건드리지 않아 유지된다.)
+  async function clearCache() {
+    setClearing(true)
+    setCacheErr(null)
+    try {
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations()
+        await Promise.all(regs.map((r) => r.unregister()))
+      }
+      if ('caches' in window) {
+        const keys = await caches.keys()
+        await Promise.all(keys.map((k) => caches.delete(k)))
+      }
+      queryClient.clear()
+      // 캐시 우회 새로고침으로 최신 자산·데이터 재요청
+      window.location.reload()
+    } catch {
+      setCacheErr(settings.cacheFail)
+      setClearing(false)
+    }
+  }
 
   // 갱신 작업 목록(올해·내년 행사 포함)
   const tasks = useMemo(() => {
@@ -108,6 +133,34 @@ export function SettingsPage() {
         <p className="mt-1 text-sm text-leaf-500">{settings.intro}</p>
       </header>
 
+      {/* 계정 정보 + 로그아웃 */}
+      <div className="rounded-2xl border border-leaf-100 bg-white p-4 dark:border-leaf-700 dark:bg-leaf-800">
+        <h2 className="text-sm font-semibold">{settings.account}</h2>
+        <div className="mt-2 flex items-center gap-3">
+          {user.user_metadata?.avatar_url && (
+            <img
+              src={user.user_metadata.avatar_url as string}
+              alt=""
+              className="h-10 w-10 shrink-0 rounded-full"
+            />
+          )}
+          <div className="min-w-0">
+            <div className="truncate text-sm font-medium">
+              {(user.user_metadata?.full_name as string) ??
+                (user.user_metadata?.name as string) ??
+                settings.accountNoName}
+            </div>
+            <div className="truncate text-xs text-leaf-500">{user.email}</div>
+          </div>
+        </div>
+        <button
+          onClick={signOut}
+          className="btn mt-3 w-full border border-rose-300 text-rose-600 hover:bg-rose-50 dark:border-rose-500/60 dark:text-rose-300 dark:hover:bg-rose-500/10 sm:w-auto"
+        >
+          {ui.logout}
+        </button>
+      </div>
+
       <div className="rounded-2xl border border-leaf-100 bg-white p-4 dark:border-leaf-700 dark:bg-leaf-800">
         <button onClick={runAll} disabled={running} className="btn-primary w-full sm:w-auto">
           {running ? settings.refreshing : settings.refreshAll}
@@ -166,6 +219,20 @@ export function SettingsPage() {
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* 앱 캐시 삭제 */}
+      <div className="rounded-2xl border border-leaf-100 bg-white p-4 dark:border-leaf-700 dark:bg-leaf-800">
+        <h2 className="text-sm font-semibold">{settings.cacheTitle}</h2>
+        <p className="mt-1 text-sm text-leaf-500">{settings.cacheIntro}</p>
+        <button
+          onClick={clearCache}
+          disabled={clearing}
+          className="btn mt-3 w-full border border-leaf-300 text-leaf-700 hover:bg-leaf-100 dark:border-leaf-600 dark:text-sand-50 dark:hover:bg-leaf-700 sm:w-auto"
+        >
+          {clearing ? settings.cacheClearing : settings.cacheBtn}
+        </button>
+        {cacheErr && <div className="mt-3 text-sm text-rose-500">{cacheErr}</div>}
       </div>
     </div>
   )

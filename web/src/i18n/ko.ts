@@ -47,6 +47,8 @@ export const nav = {
 
 // 설정 · 데이터 관리 페이지
 export const settings = {
+  account: '계정',
+  accountNoName: '이름 없음',
   title: '데이터 관리',
   intro:
     '동물의 숲 데이터를 한 번 받아 저장해두고 사용합니다. 게임 업데이트 등으로 데이터가 바뀌면 아래 버튼으로 갱신하세요.',
@@ -59,6 +61,13 @@ export const settings = {
   doneAll: '갱신 완료',
   failed: '실패',
   retry: '재시도',
+  // ── 캐시 삭제 ──
+  cacheTitle: '앱 캐시 삭제',
+  cacheIntro:
+    '보유·도감 체크가 화면에 잘못 보이거나, 화면이 옛날 버전으로 보일 때 사용하세요. 저장된 임시 데이터를 비우고 새로 받아옵니다. 로그인 상태는 유지됩니다.',
+  cacheBtn: '캐시 삭제 후 새로고침',
+  cacheClearing: '캐시 삭제 중…',
+  cacheFail: '캐시 삭제에 실패했습니다. 다시 시도해 주세요.',
 }
 
 // nook_dataset 엔드포인트 → 한글 라벨 (events 저장키는 'events:YYYY')
