@@ -2,6 +2,28 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 
+// Supabase(PostgREST) 기본 조회 한도는 1000행. 보유/도감 행이 1000을 넘으면
+// 페이지네이션 없이는 앞 1000개만 와서 나머지가 '미보유'로 보인다.
+// .range()로 1000개씩 끝까지 받아 합친다.
+const PAGE_SIZE = 1000
+async function selectAll<T>(
+  table: string,
+  columns: string,
+): Promise<T[]> {
+  const all: T[] = []
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from(table)
+      .select(columns)
+      .range(from, from + PAGE_SIZE - 1)
+    if (error) throw error
+    const rows = (data ?? []) as T[]
+    all.push(...rows)
+    if (rows.length < PAGE_SIZE) break
+  }
+  return all
+}
+
 // ── 도감 진행상황 ─────────────────────────────────────────
 export interface CritterState {
   caught: boolean
@@ -20,12 +42,15 @@ export function useCritterpedia() {
     queryKey: key,
     enabled: !!uid,
     queryFn: async (): Promise<CritterMap> => {
-      const { data, error } = await supabase
-        .from('critterpedia_progress')
-        .select('category, entry_id, caught, donated, model')
-      if (error) throw error
+      const rows = await selectAll<{
+        category: string
+        entry_id: string
+        caught: boolean
+        donated: boolean
+        model: boolean | null
+      }>('critterpedia_progress', 'category, entry_id, caught, donated, model')
       const map: CritterMap = {}
-      for (const r of data ?? []) {
+      for (const r of rows) {
         map[`${r.category}:${r.entry_id}`] = {
           caught: r.caught,
           donated: r.donated,
@@ -84,11 +109,11 @@ export function useRecipeProgress() {
     queryKey: key,
     enabled: !!uid,
     queryFn: async (): Promise<Set<string>> => {
-      const { data, error } = await supabase
-        .from('recipe_progress')
-        .select('recipe_id, learned')
-      if (error) throw error
-      return new Set((data ?? []).filter((r) => r.learned).map((r) => r.recipe_id))
+      const rows = await selectAll<{ recipe_id: string; learned: boolean }>(
+        'recipe_progress',
+        'recipe_id, learned',
+      )
+      return new Set(rows.filter((r) => r.learned).map((r) => r.recipe_id))
     },
   })
 
@@ -138,12 +163,14 @@ export function useItemCollection() {
     queryKey: key,
     enabled: !!uid,
     queryFn: async (): Promise<ItemMap> => {
-      const { data, error } = await supabase
-        .from('item_collection')
-        .select('item_id, owned, wishlist, hidden')
-      if (error) throw error
+      const rows = await selectAll<{
+        item_id: string
+        owned: boolean
+        wishlist: boolean
+        hidden: boolean
+      }>('item_collection', 'item_id, owned, wishlist, hidden')
       const map: ItemMap = {}
-      for (const r of data ?? []) {
+      for (const r of rows) {
         map[r.item_id] = { owned: r.owned, wishlist: r.wishlist, hidden: r.hidden }
       }
       return map
