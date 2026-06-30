@@ -13,8 +13,9 @@ import { ProgressBar } from '../components/ProgressBar'
 import { DatePicker } from '../components/DatePicker'
 import { TodoList } from '../components/TodoList'
 import { VillagerDetailModal } from '../components/VillagerDetailModal'
+import { getDayForecast, toHemisphere, SnowLevel, patternKind } from '../lib/weather/forecast'
 import { critterCategory, tEvent, eventHemisphere, eventIcon, ui } from '../i18n/ko'
-import { tr, species as speciesKo } from '../i18n/terms'
+import { tr, species as speciesKo, patternKindName, tWeatherEmoji } from '../i18n/terms'
 
 const CRITTER_CATS = ['fish', 'bugs', 'sea', 'fossils', 'art'] as const
 const MONTHS = [
@@ -49,6 +50,35 @@ export function HomePage() {
   })[0]
 
   const itemRate = store.rate(store.rows)
+
+  // 선택일 날씨 배지(시드 입력 시): 대표 날씨 이모지 + 패턴 + 특수이벤트 아이콘(월간화면과 동일)
+  const weatherBadge = useMemo(() => {
+    if (prefs.weatherSeed == null) return null
+    const fc = getDayForecast(
+      toHemisphere(prefs.hemisphere),
+      prefs.weatherSeed,
+      date.getFullYear(),
+      date.getMonth() + 1,
+      date.getDate(),
+      false,
+    )
+    const snow = fc.snowLevel !== SnowLevel.None
+    const icons: string[] = []
+    if (fc.heavyShower) icons.push('🌠')
+    if (fc.lightShower) icons.push('✨')
+    if (fc.rainbowCount === 1) icons.push('🌈')
+    if (fc.rainbowCount === 2) icons.push('🌈🌈')
+    if (fc.aurora) icons.push('🌌')
+    if (fc.heavyFog || fc.waterFog) icons.push('🌫️')
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-leaf-100 px-2 py-0.5 text-sm dark:bg-leaf-700/60">
+        <span>{tWeatherEmoji(fc.weather[12], snow)}</span>
+        <span className="font-medium">{patternKindName[patternKind(fc.pattern)]}</span>
+        {icons.length > 0 && <span>{icons.join(' ')}</span>}
+      </span>
+    )
+  }, [prefs.weatherSeed, prefs.hemisphere, date])
+
   // 선택일 이벤트(생일·노이즈 제외, 한글화, 반구 필터)
   const todayEvents = useMemo(
     () =>
@@ -85,7 +115,7 @@ export function HomePage() {
     <div className="space-y-6">
       {/* 날짜 + 이벤트 + 생일 + To-do */}
       <section className="card space-y-3 p-5">
-        <DatePicker />
+        <DatePicker extra={weatherBadge} />
         <div className="flex flex-wrap gap-2 text-sm">
           {todayEvents.length > 0 ? (
             todayEvents.map((e, i) => (

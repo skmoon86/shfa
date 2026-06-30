@@ -1,9 +1,11 @@
+import type { ReactNode } from 'react'
 import { useSelectedDate, toISODate } from '../context/DateContext'
 
 const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토']
 
 // 전역 선택 날짜 표시 + 수정. 홈·캘린더 상단에서 사용.
-export function DatePicker({ compact = false }: { compact?: boolean }) {
+// extra: 날짜 라벨과 날짜 선택 입력 사이에 끼워 넣을 내용(예: 그날 날씨 배지).
+export function DatePicker({ compact = false, extra }: { compact?: boolean; extra?: ReactNode }) {
   const { date, setDate, resetToday, isToday } = useSelectedDate()
   const label = `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 (${WEEKDAY[date.getDay()]})`
 
@@ -12,6 +14,7 @@ export function DatePicker({ compact = false }: { compact?: boolean }) {
       <span className={compact ? 'text-sm font-semibold' : 'text-lg font-bold'}>
         📅 {label}
       </span>
+      {extra}
       <input
         type="date"
         value={toISODate(date)}
