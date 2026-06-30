@@ -1,3 +1,4 @@
+// MeteoNook(© 2020 Ash Wolf "Ninji", AGPL-3.0) 파생. 저장소 루트 LICENSE 참조.
 // 날짜 → 시드 변환 (MeteoNook src/lib.rs compute_seed_ymd / compute_seed_ymdh).
 // base|0x80000000 은 JS에서 음수가 되므로 반드시 >>>0. wrapping_add 는 (a+b)>>>0.
 

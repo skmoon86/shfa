@@ -40,6 +40,20 @@ export function WeatherPage() {
     [hasSeed, view, hemi, seed, year, month],
   )
 
+  // 출처·소스 안내 (AGPL-3.0 §13: 네트워크 이용자에게 소스 제공 안내)
+  const credit = (
+    <p className="pt-1 text-center text-[11px] leading-relaxed text-leaf-400">
+      날씨 예측 알고리즘:{' '}
+      <a href="https://github.com/Treeki/MeteoNook" target="_blank" rel="noreferrer" className="underline">
+        MeteoNook
+      </a>{' '}
+      © Ash Wolf, AGPL-3.0 ·{' '}
+      <a href="https://github.com/skmoon86/shfa" target="_blank" rel="noreferrer" className="underline">
+        소스 코드
+      </a>
+    </p>
+  )
+
   // 빈 상태: 시드 미입력
   if (!hasSeed) {
     return (
@@ -53,6 +67,7 @@ export function WeatherPage() {
             {L.goSettings}
           </Link>
         </div>
+        {credit}
       </div>
     )
   }
@@ -135,6 +150,7 @@ export function WeatherPage() {
       )}
 
       <WeatherDaySheet day={daySheet} hemi={hemiStr} onClose={() => setDaySheet(null)} />
+      {credit}
     </div>
   )
 }

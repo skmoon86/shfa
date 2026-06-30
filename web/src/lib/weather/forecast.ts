@@ -1,3 +1,5 @@
+// MeteoNook(© 2020 Ash Wolf "Ninji", github.com/Treeki/MeteoNook) 파생 — AGPL-3.0.
+// 전체 라이선스는 저장소 루트 LICENSE 참조.
 // ACNH 날씨 예보 엔진 — MeteoNook src/lib.rs + js/model.ts 포팅.
 // 섬 날씨 시드 + 반구 + 날짜로 시간별 날씨와 별똥별·무지개·오로라·안개·눈·바람을 결정적으로 계산.
 // ⚠ 특수 구름(special clouds)은 게임 v2.0 이후 라이브 사이트(MeteoNook)에서도 표시하지 않으므로 미구현.

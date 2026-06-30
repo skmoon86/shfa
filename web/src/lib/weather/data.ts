@@ -1,5 +1,6 @@
-// AUTO-GENERATED from MeteoNook src/data.rs (AGPL-3.0, Treeki/MeteoNook).
-// Reverse-engineered ACNH weather data tables. Do not edit by hand — regenerate via scripts.
+// AUTO-GENERATED from MeteoNook src/data.rs — © 2020 Ash Wolf ("Ninji"),
+// github.com/Treeki/MeteoNook, AGPL-3.0 (저장소 루트 LICENSE 참조).
+// Reverse-engineered ACNH weather data tables. Do not edit by hand — regenerate via parser.
 /* eslint-disable */
 
 export const EASTER_DAYS = [23,15,31,20,11,27,16,8,23,12,4,24,8,31,20,5,27,16,1,21,12,4,17,9,31,20,5,28,16,1,21,13,28,17,9,25,13,5,25,10,1,21,6,29,17,9,25,14,5,18,10,2,21,6,29,18,2,22,14,30,18] as const

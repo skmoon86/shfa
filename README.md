@@ -102,3 +102,13 @@ npx supabase functions serve nookipedia-proxy --env-file ./supabase/.env.local
 - Nookipedia API: https://api.nookipedia.com/
 - 성격별 레시피(`web/src/data/villagerRecipes.ts`)는 Nookipedia 위키와 커뮤니티 연구 기반의
   **대표 시드**이며 자유롭게 보완할 수 있습니다. (Nookipedia API에는 성격↔레시피 매핑이 없습니다.)
+- **날씨 예측**(`web/src/lib/weather/`)은 **MeteoNook**의 알고리즘을 옮긴 것입니다.
+  MeteoNook © 2020 Ash Wolf ("Ninji"), https://github.com/Treeki/MeteoNook (AGPL-3.0).
+
+---
+
+## 라이선스
+- 이 저장소는 **GNU Affero General Public License v3.0 (AGPL-3.0)** 으로 배포됩니다 — 루트 [`LICENSE`](./LICENSE) 참조.
+- 날씨 기능(`web/src/lib/weather/`)이 AGPL-3.0인 [MeteoNook](https://github.com/Treeki/MeteoNook)(© Ash Wolf)의
+  파생물이므로, 이를 포함하는 본 저작물 전체가 AGPL-3.0를 따릅니다.
+- AGPL §13에 따라 네트워크로 제공되는 앱(날씨 페이지)에 **소스 코드 안내 링크**를 표시합니다.
