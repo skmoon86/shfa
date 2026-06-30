@@ -82,7 +82,7 @@ supabase db push --password <DB비번>
 
 ---
 
-## 최근 작업 기록 — 2026-06-27 (resume point)
+## 최근 작업 기록 — 2026-06-27
 
 > **배포 반영 = `main`.** Vercel Production은 `main` 브랜치를 빌드한다(`feature/six-features-rewrite`는 Preview). 작업 후 반드시 `main`에 올려야 사용자에게 보인다.
 > **⚠️ 작업 폴더 함정:** Claude Code 세션 기본 cwd가 `E:\mail\HMS`(무관한 메일 프로젝트)일 수 있다. 이 저장소 명령은 **반드시 `E:\fa`를 대상**으로 — `cd /e/fa && …` 또는 `git -C E:/fa …`. (예: `git -C E:/fa push origin main`)
@@ -108,3 +108,32 @@ supabase db push --password <DB비번>
 - [ ] **프로덕션에서 사과·체리 표시 최종 확인**: 프로덕션이 새 코드(main 8116ee8)인데도 안 보이면 원인은 **PWA 서비스워커 캐시**. F12→Application→Service workers→Unregister + Storage→Clear site data 후 재확인. (코드/데이터상으로는 정상.)
 - [ ] **(선택) '심어진 형태' 자연물 추가**: 침엽수 나무·사과나무·꽃 모종·관목 등을 보여주려면 별도 번들 데이터(`public/data/extra-items.json` 등) 필요 — Nookipedia에 없어 이미지 수집이 관건. 사용자 결정 대기.
 - 참고: ESLint는 기존부터 일부 규칙 위반(예: `[...selected].join(',')` deps, `a ? b : c` 표현식 statement) 존재 — 이번 작업이 새로 만든 건 아님. `npm run build`(tsc)는 통과.
+
+---
+
+## 최근 작업 기록 — 2026-06-30 (resume point)
+
+> 현재 `main` == `feature/six-features-rewrite` == `33cb443`(원격 동기화 완료).
+> 발단: 사용자(이소희, sohee Lee)가 "보유 체크가 풀렸다"고 신고 → service_role 키로 DB 직접 확인하며 진단.
+
+### 진단 결과 — 데이터 유실 아님
+- DB 직접 조회(REST + service_role 키, 임시 키는 스크래치패드에 두고 사용 후 삭제): **보유 데이터 안전**. `item_collection` 계정별 보유 = dodosohya 1,111 / 문상경 8 / arangjuny 0.
+- "보유=false" 행 대부분은 **숨김(hidden) 처리**된 것(유실 아님). 대량 리셋 흔적 없음.
+
+### 진짜 원인 = **Supabase REST 1000행 한도** (커밋 `33cb443`)
+- `useProgress.ts` 조회들은 RLS로 본인 행 전체를 받아 map/set 생성 — `item_collection`이 **2,398행**이 되자 PostgREST 기본 한도 1000으로 **앞 1000행만 로드**(그 중 보유 658) → 나머지 보유 ~453개가 화면에서 미보유로 보임.
+- **수정**: `selectAll(table, columns)` 헬퍼가 `.range()` 1000개씩 끝까지 받아 합침. item_collection·critterpedia_progress·recipe_progress 적용. (favorite_villagers·villager_photos는 ~400이라 아직 안전.)
+- 메모리: [[supabase-1000-row-limit]].
+
+### 계정 매핑 (메모리: [[acnh-account-map]])
+- **dodosohya@gmail.com**(`18d02e4f`, "sohee Lee", 05-31) = **실제 데이터 계정**(보유 1,111).
+- **arangjuny@gmail.com**(`365f8cb2`, "이소희", 06-27) = **빈 중복 계정**(0행). 06-27 11:31에 두 계정 40초 차로 연달아 로그인 = 계정 전환 흔적. 여기로 로그인하면 전부 미보유로 보임.
+- sangkyung@gmail.com(`96b592e0`, 문상경) = 개발자 테스트.
+
+### 설정 화면 UX 추가 (커밋 `4e4cde8`)
+- **계정 카드**(맨 위): 사진·이름·**로그인 이메일** 표시 + 로그아웃 버튼. 기존 헤더 로그아웃은 데스크톱 전용(`hidden sm:`)이라 모바일에서 안 보였음 → 모바일에서도 보이게.
+- **앱 캐시 삭제 카드**(맨 아래): 서비스워커 해제 + CacheStorage·React Query 캐시 비우고 새로고침. 로그인은 유지. 라벨은 `i18n/ko.ts` `settings`에 추가.
+
+### 남은 일 / TODO
+- [ ] **재배포 후 dodosohya 계정에서 보유 1,111개 전부 표시 확인**(1000행 수정 반영). 안 보이면 로그인 계정이 arangjuny인지부터 확인(설정→계정 이메일).
+- [ ] (이전 라운드) 사과·체리 프로덕션 표시 확인 / '심어진 형태' 자연물 추가는 사용자 결정 대기 — 위 2026-06-27 기록 참조.
