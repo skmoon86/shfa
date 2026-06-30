@@ -9,12 +9,11 @@ export function DatePicker({ compact = false, extra }: { compact?: boolean; extr
   const { date, setDate, resetToday, isToday } = useSelectedDate()
   const label = `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 (${WEEKDAY[date.getDay()]})`
 
-  return (
+  const dateLabel = (
+    <span className={compact ? 'text-sm font-semibold' : 'text-lg font-bold'}>📅 {label}</span>
+  )
+  const dateControls = (
     <div className="flex flex-wrap items-center gap-2">
-      <span className={compact ? 'text-sm font-semibold' : 'text-lg font-bold'}>
-        📅 {label}
-      </span>
-      {extra}
       <input
         type="date"
         value={toISODate(date)}
@@ -29,6 +28,23 @@ export function DatePicker({ compact = false, extra }: { compact?: boolean; extr
           오늘로
         </button>
       )}
+    </div>
+  )
+
+  // 배지(extra)가 있으면 줄바꿈: 날짜 / 날씨배지 / 날짜선택. 없으면 기존 한 줄.
+  if (extra) {
+    return (
+      <div className="flex flex-col items-start gap-2">
+        {dateLabel}
+        <div>{extra}</div>
+        {dateControls}
+      </div>
+    )
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {dateLabel}
+      {dateControls}
     </div>
   )
 }
