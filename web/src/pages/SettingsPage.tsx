@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../context/AuthContext'
+import { useUserPrefs } from '../hooks/useUserPrefs'
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '../lib/supabase'
 import { settings, datasetLabel, ui } from '../i18n/ko'
 
@@ -37,6 +38,34 @@ export function SettingsPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [clearing, setClearing] = useState(false)
   const [cacheErr, setCacheErr] = useState<string | null>(null)
+
+  // ── 반구 + 날씨 시드 ──
+  const { prefs, update: updatePrefs } = useUserPrefs()
+  const [seedInput, setSeedInput] = useState('')
+  const [seedErr, setSeedErr] = useState<string | null>(null)
+  const [seedSaved, setSeedSaved] = useState(false)
+  // 로드된 시드를 입력칸에 동기화
+  useEffect(() => {
+    setSeedInput(prefs.weatherSeed == null ? '' : String(prefs.weatherSeed))
+  }, [prefs.weatherSeed])
+
+  function saveSeed() {
+    setSeedErr(null)
+    setSeedSaved(false)
+    const t = seedInput.trim()
+    if (t === '') {
+      updatePrefs.mutate({ weatherSeed: null })
+      setSeedSaved(true)
+      return
+    }
+    const v = Number(t)
+    if (!Number.isInteger(v) || v < 0 || v > 2147483647) {
+      setSeedErr(settings.weatherSeedInvalid)
+      return
+    }
+    updatePrefs.mutate({ weatherSeed: v })
+    setSeedSaved(true)
+  }
 
   // PWA 서비스워커·캐시스토리지·메모리 캐시를 비우고 새로고침.
   // (로그인 세션은 localStorage에 있으므로 건드리지 않아 유지된다.)
@@ -159,6 +188,52 @@ export function SettingsPage() {
         >
           {ui.logout}
         </button>
+      </div>
+
+      {/* 반구 */}
+      <div className="rounded-2xl border border-leaf-100 bg-white p-4 dark:border-leaf-700 dark:bg-leaf-800">
+        <h2 className="text-sm font-semibold">{settings.hemisphereTitle}</h2>
+        <p className="mt-1 text-sm text-leaf-500">{settings.hemisphereIntro}</p>
+        <div className="mt-3 flex gap-2">
+          {(['north', 'south'] as const).map((h) => (
+            <button
+              key={h}
+              onClick={() => updatePrefs.mutate({ hemisphere: h })}
+              className={
+                'btn flex-1 sm:flex-none ' +
+                (prefs.hemisphere === h ? 'btn-primary' : 'border border-leaf-300 dark:border-leaf-600')
+              }
+            >
+              {h === 'north' ? settings.north : settings.south}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 날씨 시드 */}
+      <div className="rounded-2xl border border-leaf-100 bg-white p-4 dark:border-leaf-700 dark:bg-leaf-800">
+        <h2 className="text-sm font-semibold">{settings.weatherSeedTitle}</h2>
+        <p className="mt-1 text-sm text-leaf-500">{settings.weatherSeedIntro}</p>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={seedInput}
+            onChange={(e) => {
+              setSeedInput(e.target.value.replace(/[^0-9]/g, ''))
+              setSeedSaved(false)
+              setSeedErr(null)
+            }}
+            placeholder={settings.weatherSeedPlaceholder}
+            className="w-full rounded-xl border border-leaf-200 bg-white px-3 py-2 text-sm tabular-nums dark:border-leaf-600 dark:bg-leaf-900 sm:w-64"
+          />
+          <button onClick={saveSeed} className="btn-primary sm:w-auto">
+            {settings.weatherSeedSave}
+          </button>
+        </div>
+        {seedErr && <div className="mt-2 text-sm text-rose-500">{seedErr}</div>}
+        {seedSaved && !seedErr && <div className="mt-2 text-sm text-leaf-500">{settings.weatherSeedSaved}</div>}
       </div>
 
       <div className="rounded-2xl border border-leaf-100 bg-white p-4 dark:border-leaf-700 dark:bg-leaf-800">

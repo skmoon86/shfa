@@ -38,11 +38,48 @@ export const ui = {
 export const nav = {
   home: '홈',
   calendar: '캘린더',
+  weather: '날씨',
   critterpedia: '도감',
   items: '아이템',
   recipes: '레시피',
   villagers: '주민',
   settings: '설정',
+}
+
+// 날씨 페이지(연간→월간→일별) 라벨
+export const weatherLabel = {
+  title: '날씨',
+  // 빈 상태(시드 미입력)
+  noSeedTitle: '날씨 시드가 필요해요',
+  noSeedBody:
+    '내 섬만의 날씨 시드(숫자)를 설정에 입력하면 별똥별·무지개·오로라까지 연간·월간·일별로 예보해 드려요.',
+  goSettings: '설정에서 시드 입력',
+  // 네비
+  year: '연간',
+  month: '월간',
+  back: '뒤로',
+  today: '오늘',
+  prev: '이전',
+  next: '다음',
+  // 일별 상세
+  pattern: '날씨 패턴',
+  windPower: '바람 세기',
+  noShower: '오늘은 별똥별이 없어요.',
+  rainbowSingle: '무지개!',
+  rainbowDouble: '쌍무지개!',
+  auroraN: '오로라(북극광)!',
+  auroraS: '오로라(남극광)!',
+  heavyFog: '강한 안개',
+  waterFog: '물안개',
+  heavyShower: '많은 별똥별',
+  lightShower: '적은 별똥별',
+  // 연간 카운트 라벨
+  cLight: '적은 별똥별',
+  cHeavy: '많은 별똥별',
+  cRainbow: '무지개',
+  cDouble: '쌍무지개',
+  cAurora: '오로라',
+  hemiNote: (h: 'north' | 'south') => `※ ${h === 'north' ? '북반구' : '남반구'} 기준입니다.`,
 }
 
 // 설정 · 데이터 관리 페이지
@@ -68,6 +105,19 @@ export const settings = {
   cacheBtn: '캐시 삭제 후 새로고침',
   cacheClearing: '캐시 삭제 중…',
   cacheFail: '캐시 삭제에 실패했습니다. 다시 시도해 주세요.',
+  // ── 반구 ──
+  hemisphereTitle: '반구',
+  hemisphereIntro: '내 섬의 반구를 선택하세요. 캘린더·날씨 예보에 반영됩니다.',
+  north: '북반구',
+  south: '남반구',
+  // ── 날씨 시드 ──
+  weatherSeedTitle: '날씨 시드',
+  weatherSeedIntro:
+    '내 섬의 날씨 시드(숫자)를 입력하면 날씨 탭에서 별똥별·무지개·오로라까지 예보합니다. 시드는 섬마다 정해진 고정값입니다.',
+  weatherSeedPlaceholder: '예) 1856402561',
+  weatherSeedSave: '저장',
+  weatherSeedSaved: '저장되었습니다.',
+  weatherSeedInvalid: '0 ~ 2147483647 사이의 숫자를 입력하세요.',
 }
 
 // nook_dataset 엔드포인트 → 한글 라벨 (events 저장키는 'events:YYYY')

@@ -142,6 +142,34 @@ export function fmtTime(s?: string): string {
     .replace(/;/g, ', ')
 }
 
+// ── 날씨(MeteoNook) ─────────────────────────────────────────
+// Weather enum 0..5 → 한글 이름. 눈철에는 비/폭우 대신 눈/폭설로 표시.
+export const weatherName = ['맑음', '화창함', '흐림', '비구름', '비', '폭우']
+export const weatherNameSnow = ['맑음', '화창함', '흐림', '비구름', '눈', '폭설']
+// 일별 상세 줄 앞 이모지(라이브 사이트 lstPatternNoSnow/Snow 기준)
+export const weatherEmoji = ['☀️', '🌤️', '🌥️', '☁️', '🌧️', '⛈️']
+export const weatherEmojiSnow = ['☀️', '🌤️', '🌥️', '☁️', '🌨️', '🌨️']
+
+export function tWeather(w: number, snow = false): string {
+  return (snow ? weatherNameSnow : weatherName)[w] ?? ''
+}
+export function tWeatherEmoji(w: number, snow = false): string {
+  return (snow ? weatherEmojiSnow : weatherEmoji)[w] ?? ''
+}
+
+// PatternKind enum 0..9 → 한글 날씨 성격(영문 패턴코드 Fine06 등 노출 방지)
+export const patternKindName = [
+  '맑음', '흐림', '비', '맑음→흐림', '흐림→맑음', '맑음→비', '흐림→비', '비→흐림', '통신', '이벤트(맑음)',
+]
+
+// SpecialDay enum 1..5 → index 0..4 (lstSpecialDays)
+export const specialDayName = ['이스터 기념일', '낚시 대회', '곤충 채집 대회', '새해 카운트다운', '불꽃축제']
+// Constellation enum 0..11 (lstConstellation)
+export const constellationName = [
+  '염소자리', '물병자리', '물고기자리', '양자리', '황소자리', '쌍둥이자리',
+  '게자리', '사자자리', '처녀자리', '천칭자리', '전갈자리', '궁수자리',
+]
+
 // 범용 변환기: 정확 매칭 → 대소문자 무시 → 원문 유지
 function lookup(map: Record<string, string>, v: string): string {
   if (map[v]) return map[v]

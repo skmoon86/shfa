@@ -137,3 +137,26 @@ supabase db push --password <DB비번>
 ### 남은 일 / TODO
 - [ ] **재배포 후 dodosohya 계정에서 보유 1,111개 전부 표시 확인**(1000행 수정 반영). 안 보이면 로그인 계정이 arangjuny인지부터 확인(설정→계정 이메일).
 - [ ] (이전 라운드) 사과·체리 프로덕션 표시 확인 / '심어진 형태' 자연물 추가는 사용자 결정 대기 — 위 2026-06-27 기록 참조.
+
+---
+
+## 최근 작업 기록 — 2026-07-01 (날씨 페이지 신규)
+
+> 요청: 캘린더 우측에 **"날씨"** 신규 페이지. `https://wuffs.org/acnh/weather/`(= 오픈소스 **MeteoNook**, Ninji, AGPL-3.0) 화면을 한국어로 재현 — **연간→(월 클릭)월간→(일 클릭)일별** 드릴다운. 시드는 **설정에서 수동 입력만**(인앱 파인더 없음). 일별 화면은 라이브 사이트와 동일(특수 구름은 v2.0 이후 사이트도 미표시 → 우리도 미구현).
+
+### 핵심 = MeteoNook 알고리즘 TS 포팅 (`web/src/lib/weather/`)
+- `rng.ts`(sead::Random), `seed.ts`(computeSeedYmd/Ymdh), `data.ts`(자동생성 데이터 테이블), `forecast.ts`(전체 계산: 패턴·시간별 날씨·별똥별·무지개·오로라·안개·눈·바람 + 월간/연간 집계).
+- **JS 32비트 함정**: 곱셈 `Math.imul`, 결과 `>>>0`(부호없는 u32), 우측시프트 `>>>`. (tsconfig가 `erasableSyntaxOnly`라 enum 금지 → const 객체+타입별칭 사용.)
+- `data.ts`는 MeteoNook `src/data.rs` → **1회성 Node 파서**(`scripts` 아님, 세션 스크래치패드)로 자동 변환·차원검증. 손 전사 금지. RATE_LOOKUP[12][31]·RATE_MAPS[40][100]·PATTERNS[34][24]·WINDS[34][24] + 특수일[61].
+- ⭐ **검증 = 실제 MeteoNook WASM을 ground truth로 대조**(wuffs.org 빌드의 `.module.wasm`을 Node에서 직접 instantiate, export를 arity+동작으로 자동 식별). getPattern 30만·windPower 10만·rainbow 10만·waterFog 10만·별똥별 카운트 13만/초배열 1.2만 **전부 bit-for-bit 일치**. 메모리: [[acnh-weather-meteonook-port]].
+- **AGPL-3.0 주의**: 데이터는 리버스 엔지니어링 게임 사실, 본 앱은 네트워크 서비스. 개인/가족용 비상업 전제로 진행(법적 판단은 사용자 몫). `data.ts` 상단에 출처 주석.
+
+### UI / 배선
+- `pages/WeatherPage.tsx`(드릴다운 상태 + 시드 없을 때 빈 상태 CTA), `components/weather/`{WeatherYearView, WeatherMonthView(일별 행+시간막대, 사이트와 동일), WeatherDaySheet(Sheet 바텀시트: 시간별 날씨/바람 + 별똥별·무지개·오로라·안개), WeatherHourBar(24칸 게임일 05→04시)}.
+- 라우트 `App.tsx`(calendar 다음 `weather`), 네비 `Layout.tsx` `links` 3번째 자리(`🌤️`).
+- i18n: `ko.ts` `nav.weather`·`weatherLabel`·`settings`(반구/시드 라벨); `terms.ts` `weatherName/Emoji`(눈철 변형)·`patternKindName`(영문 패턴코드 노출 방지)·`specialDayName`·`constellationName`.
+- 설정: `SettingsPage.tsx`에 **반구 카드 + 시드 입력 카드** 추가. 저장은 `useUserPrefs`(`weatherSeed:number|null` 추가). 마이그레이션 `0007_weather_seed.sql`(user_prefs에 `weather_seed bigint`, **원격 적용 완료**).
+
+### 남은 일 / TODO
+- [ ] **커밋·푸시 안 함**(사용자 승인 대기). main 반영 시 Vercel 자동 배포. 빌드(`npm run build`) 통과, 마이그레이션 적용 완료.
+- [ ] 로그인+시드 입력 후 실기기 시각 확인(예보 화면은 OAuth 로그인 필요해 자동 스크린샷 불가). 정합성은 wuffs.org와 비교 가능(엔진은 WASM 대조로 검증 끝).
