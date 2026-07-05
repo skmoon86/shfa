@@ -15,7 +15,7 @@ import {
 import { ui, tSource } from '../i18n/ko'
 import { fmtBells, fmtBuy } from '../lib/format'
 
-const KO_CATS = ['furniture', 'clothing', 'interior', 'items', 'tools', 'gyroids']
+const KO_CATS = ['furniture', 'clothing', 'interior', 'items', 'tools', 'gyroids', 'photos']
 const TABS = BUCKET_ORDER.map((b) => ({ code: b, label: bucketLabel[b] }))
 const PAGE = 60
 

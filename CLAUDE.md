@@ -160,3 +160,32 @@ supabase db push --password <DB비번>
 ### 남은 일 / TODO
 - [ ] **커밋·푸시 안 함**(사용자 승인 대기). main 반영 시 Vercel 자동 배포. 빌드(`npm run build`) 통과, 마이그레이션 적용 완료.
 - [ ] 로그인+시드 입력 후 실기기 시각 확인(예보 화면은 OAuth 로그인 필요해 자동 스크린샷 불가). 정합성은 wuffs.org와 비교 가능(엔진은 WASM 대조로 검증 끝).
+
+---
+
+## 최근 작업 기록 — 2026-07-05 (4건 UI 개선)
+
+> 요청 4건: ① 주민 메뉴 기본탭='내 주민' ② 아이템에 NPC 액자 표시(마스터 액자 등) ③ 홈 날씨배지 클릭→날씨 일별 화면 ④ 주민 필터 '액자 획득만'→'액자 미획득만'.
+
+### NPC 액자 통합 (핵심·비자명)
+- 원인: 아이템 파이프라인이 `/nh/photos`를 아예 미로드였음(`nookipedia.photos()`는 dead code였음). `useItemsStore`에 photos+villagers 쿼리 추가, `itemBuckets.classify`에 photos 루프 신설(버킷 `'photos'`='액자', BUCKET_ORDER gyroids 다음).
+- **범위 = NPC 액자만 62건**(사용자 결정): 포스터 제외(`category !== 'Photos'` 스킵), 주민용 액자 제외(주민 페이지 🖼️ 토글과 이중관리 방지).
+- ⚠️ **주민 판별은 주민 API 이름셋 기준**(`['nook','villagers']` 쿼리, 홈과 캐시 공유). `ko/villagers.json` 기준으로 하면 안 됨 — 콜라보 주민 4명(cece/viché/mineru/tulin)이 빠져 있어 주민 액자가 NPC로 샌다. **villagerNames가 빈 셋이면 photos 전체 보류**(아니면 주민 액자 830건 누출).
+- ⚠️ photos는 최상위 `image_url` 없음(프레임 `variations[]`에만) → classify에서 `variations[0].image_url` 폴백 주입. `availability`도 없음 → 획득방법 '정보 없음' 표기(원데이터 한계).
+- ⚠️ `useItemsStore`의 useMemo deps는 eslint-disable 수동 배열 — 쿼리 추가 시 `.data`를 deps에도 추가해야 함(누락 시 조용히 미표시). useQueries 구조분해는 **맨 끝에만 추가**(중간 삽입 시 인덱스 밀림).
+- 검증: 실제 classify를 esbuild 번들로 라이브 데이터 실행 — 62건·주민누출 0·포스터 0·한글누락 0·빈셋 가드 OK.
+
+### 나머지 3건
+- 주민: `residentOnly` 기본 true. `villager_state`는 persist 미대상이라 새로고침 직후 빈 카드 플래시 → `stateLoading` 스피너 분기 추가. 카운트는 `baseRows`(검색·종·성격까지만 적용) 기준으로 분리. `noPhotoOnly`로 반전.
+- 날씨 딥링크: 홈 배지를 `<Link to="/weather?day=1">`로. WeatherPage는 `useSearchParams`를 **lazy useState initializer**에서 소비(StrictMode 이중실행·뒤로가기 재트리거 회피) + 마운트 effect에서 `setSearchParams({},{replace:true})`로 URL 정리. 시드 없거나 연도 2000~2060 밖이면 무시.
+- `ko/villagers.json`에 콜라보 주민 4명 수동 보강(체체/비셰/미네르/툴린 — photos.json 공식 번역에서 역산). ⚠️ Norviah 데이터엔 없어 `gen-ko.mjs` 재생성 시 유실될 수 있음 — 재생성 후 이 4명 유지 확인 필요.
+
+### 적대 리뷰 후속 수정 (다중 에이전트 검증에서 확정된 4건)
+- **주민 스피너 가드 보강**: `stateLoading`만으론 부족 — 세션 복원 전엔 쿼리가 비활성이라 `isLoading=false`(TanStack v5). `useAuth().loading`(authLoading)을 가드에 포함해야 콜드스타트 빈 카드 플래시가 안 남.
+- **NPC 액자 비고 한글화**: `tNote`에 `complete X's vacation home` 패턴 처리(복수 "A or B"·경칭 Mr./Dr./K.K. Slider 포함) + `npcName` 사전(공식 한글명 60여 종, photos.json에서 추출) 신설. 위키 마크업 `''` 제거도 tNote에서 처리.
+- **변형 라벨**: `terms.ts` color에 Natural wood/Dark wood/Pastel/Pop/Silver/Gold 추가(액자 프레임 8종 + 기존 가구 누출도 해소).
+- ⭐ **sourceLabel NPC 오표기 14건 일괄 수정**(공식 kRko 대조): Redd 갸르송→**여욱**(추첨/협동조합/보물선 합성 라벨 포함), Lottie 로티→**솜이**, Kicks 슈슈→**패트릭**, Label→고숙이, Mabel→고순이, Kapp'n→갑돌, Rover→낯선고양이, Luna→몽셰르, Resetti→도루묵씨, Joan→무파라, Wardell→너티, Harvey→파니엘, Leif→늘봉, Jingle→루돌. ⚠️ `Daisy`(무파니)는 주민 데이지(바닐라)와 영문명 충돌인 **오탐이라 유지**, `Niko→해피홈 파라다이스`는 의도적 매핑이라 유지. 검증법: ko.ts를 esbuild 번들 → sourceLabel을 photos.json("X의 사진")과 대조.
+
+### 남은 일 / TODO
+- [ ] 커밋·푸시(사용자 승인 대기). 빌드 통과, DB 변경 없음.
+- [ ] 실기기 확인: 아이템 '액자' 탭 62건 / 주민 기본탭 / 홈 배지→일별 시트(로그인+시드 필요라 자동검증 불가).

@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useUserPrefs } from '../hooks/useUserPrefs'
 import { useSelectedDate } from '../context/DateContext'
 import {
@@ -23,13 +23,32 @@ export function WeatherPage() {
   const hemiStr = prefs.hemisphere
   const hemi = toHemisphere(hemiStr)
   const { date } = useSelectedDate()
+  const hasSeed = seed != null
 
-  const [view, setView] = useState<'year' | 'month'>('year')
+  // 홈 날씨 배지 딥링크(?day=1): 선택 날짜의 일별 시트를 바로 연다.
+  // StrictMode 이중 실행·뒤로가기 재트리거를 피하려고 effect가 아닌 초기값에서 소비.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const wantDay =
+    searchParams.get('day') != null &&
+    hasSeed &&
+    date.getFullYear() >= MIN_YEAR &&
+    date.getFullYear() <= MAX_YEAR
+
+  const [view, setView] = useState<'year' | 'month'>(wantDay ? 'month' : 'year')
   const [year, setYear] = useState(() => Math.min(MAX_YEAR, Math.max(MIN_YEAR, date.getFullYear())))
   const [month, setMonth] = useState(() => date.getMonth() + 1)
-  const [daySheet, setDaySheet] = useState<DayForecast | null>(null)
+  const [daySheet, setDaySheet] = useState<DayForecast | null>(() =>
+    wantDay
+      ? getDayForecast(hemi, seed!, date.getFullYear(), date.getMonth() + 1, date.getDate(), true)
+      : null,
+  )
 
-  const hasSeed = seed != null
+  // URL의 day 파라미터는 소비 즉시 제거 — 새로고침 시 시트가 다시 열리지 않고,
+  // 뒤로가기는 홈으로 정상 복귀한다.
+  useEffect(() => {
+    if (searchParams.has('day')) setSearchParams({}, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const yearAgg = useMemo(
     () => (hasSeed && view === 'year' ? getYearAggregate(hemi, seed!, year) : []),

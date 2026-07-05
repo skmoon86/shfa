@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { nookipedia, type Villager } from '../lib/nookipedia'
+import { useAuth } from '../context/AuthContext'
 import { useVillagerState } from '../hooks/useVillagerState'
 import { useKoNames } from '../hooks/useKoNames'
 import { useCanSave, ToggleButton } from '../components/Toggle'
@@ -17,12 +18,13 @@ export function VillagersPage() {
   const [q, setQ] = useState('')
   const [species, setSpecies] = useState('')
   const [pers, setPers] = useState('')
-  const [residentOnly, setResidentOnly] = useState(false)
-  const [photoOnly, setPhotoOnly] = useState(false)
+  const [residentOnly, setResidentOnly] = useState(true)
+  const [noPhotoOnly, setNoPhotoOnly] = useState(false)
   const [limit, setLimit] = useState(PAGE)
   const [detail, setDetail] = useState<Villager | null>(null)
   const canSave = useCanSave()
-  const { map, toggle } = useVillagerState()
+  const { loading: authLoading } = useAuth()
+  const { map, toggle, isLoading: stateLoading } = useVillagerState()
   const ko = useKoNames('villagers')
 
   const query = useQuery({
@@ -34,7 +36,8 @@ export function VillagersPage() {
 
   const speciesList = useMemo(() => [...new Set(data.map((v) => v.species))].sort(), [data])
 
-  const filtered = useMemo(() => {
+  // 검색·종·성격까지만 적용된 목록 — 카운트 표기는 탭(내주민)·액자 필터와 무관하게 이 기준
+  const baseRows = useMemo(() => {
     let rows = data
     if (q.trim()) {
       const l = q.toLowerCase()
@@ -47,8 +50,14 @@ export function VillagersPage() {
     }
     if (species) rows = rows.filter((v) => v.species === species)
     if (pers) rows = rows.filter((v) => v.personality === pers)
+    return rows
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, q, species, pers, ko])
+
+  const filtered = useMemo(() => {
+    let rows = baseRows
     if (residentOnly) rows = rows.filter((v) => map[v.name]?.resident)
-    if (photoOnly) rows = rows.filter((v) => map[v.name]?.photo)
+    if (noPhotoOnly) rows = rows.filter((v) => !map[v.name]?.photo)
     // 정렬: 위시 항상 상단, 그 다음 이름순
     return [...rows].sort((a, b) => {
       const wa = map[a.name]?.wish ? 1 : 0
@@ -57,10 +66,10 @@ export function VillagersPage() {
       return ko(a.name).localeCompare(ko(b.name), 'ko')
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, q, species, pers, residentOnly, photoOnly, map, ko])
+  }, [baseRows, residentOnly, noPhotoOnly, map, ko])
 
   const shown = filtered.slice(0, limit)
-  const residentCount = filtered.filter((v) => map[v.name]?.resident).length
+  const residentCount = baseRows.filter((v) => map[v.name]?.resident).length
 
   return (
     <div>
@@ -109,15 +118,18 @@ export function VillagersPage() {
           ))}
         </select>
         <label className="flex items-center gap-1.5 text-sm">
-          <input type="checkbox" checked={photoOnly} onChange={(e) => setPhotoOnly(e.target.checked)} />
-          🖼️ 액자 획득만
+          <input type="checkbox" checked={noPhotoOnly} onChange={(e) => setNoPhotoOnly(e.target.checked)} />
+          🖼️ 액자 미획득만
         </label>
         <span className="ml-auto text-xs text-leaf-400">
-          내 주민 {residentCount} / 전체 {filtered.length}명
+          내 주민 {residentCount} / 전체 {baseRows.length}명
         </span>
       </div>
 
-      {query.isLoading ? (
+      {query.isLoading || (residentOnly && (authLoading || stateLoading)) ? (
+        // villager_state는 persist 미대상 + 세션 복원 전엔 쿼리 비활성(isLoading=false) —
+        // 로그인 사용자의 새로고침/콜드스타트에서 기본탭(내 주민)에 빈 안내 카드가
+        // 번쩍이지 않도록 인증 복원(authLoading)과 상태 로딩을 함께 가드
         <Spinner />
       ) : query.error ? (
         <ErrorState error={query.error} />

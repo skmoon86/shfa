@@ -45,7 +45,7 @@ export function recipeCatOf(r: Recipe): RecipeCat {
   if (f(/fireworks/)) return 'fireworks'
   if (f(/halloween|\bjack\b/)) return 'halloween'
   if (f(/turkey day|franklin/)) return 'turkey'
-  if (f(/toy day|jingle/)) return 'christmas' // 토이데이(룰루) 전용. 오너먼트 제작 DIY는 아래 ornament 로.
+  if (f(/toy day|jingle/)) return 'christmas' // 토이데이(루돌) 전용. 오너먼트 제작 DIY는 아래 ornament 로.
   // 시즌 재료(재료/이름/노트)
   if (m(/cherry.?blossom petal|young spring bamboo|bamboo shoot/) || n(/cherry.?blossom|bamboo/) || f(/cherry.?blossom season/)) return 'cherry'
   if (m(/summer shell/) || n(/\bshell\b/)) return 'shell'

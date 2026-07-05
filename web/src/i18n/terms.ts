@@ -34,6 +34,9 @@ export const color: Record<string, string> = {
   Aqua: '하늘색', Beige: '베이지', Black: '검정', Blue: '파랑', Brown: '갈색',
   Colorful: '컬러풀', Gray: '회색', Green: '초록', Orange: '주황', Pink: '분홍',
   Purple: '보라', Red: '빨강', White: '하양', Yellow: '노랑',
+  // 변형(variation) 라벨로도 쓰임 — 액자 프레임 8종 + 가구 공통
+  'Natural wood': '내추럴 우드', 'Dark wood': '다크 우드', Pastel: '파스텔',
+  Pop: '팝', Silver: '실버', Gold: '골드',
 }
 
 export const month: Record<string, string> = {

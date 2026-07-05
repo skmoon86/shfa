@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQueries } from '@tanstack/react-query'
 import { nookipedia, type Critter, type Fossil, type Art, type Villager } from '../lib/nookipedia'
 import { useAuth } from '../context/AuthContext'
@@ -71,11 +72,15 @@ export function HomePage() {
     if (fc.aurora) icons.push('🌌')
     if (fc.heavyFog || fc.waterFog) icons.push('🌫️')
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-leaf-100 px-2 py-0.5 text-sm dark:bg-leaf-700/60">
+      <Link
+        to="/weather?day=1"
+        title="이 날의 시간별 날씨 보기"
+        className="inline-flex items-center gap-1 rounded-full bg-leaf-100 px-2 py-0.5 text-sm hover:bg-leaf-200 dark:bg-leaf-700/60 dark:hover:bg-leaf-600/60"
+      >
         <span>{tWeatherEmoji(fc.weather[12], snow)}</span>
         <span className="font-medium">{patternKindName[patternKind(fc.pattern)]}</span>
         {icons.length > 0 && <span>{icons.join(' ')}</span>}
-      </span>
+      </Link>
     )
   }, [prefs.weatherSeed, prefs.hemisphere, date])
 

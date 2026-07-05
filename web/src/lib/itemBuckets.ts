@@ -1,23 +1,25 @@
-// 아이템 분류기(순수 함수). 7개 엔드포인트 + Norviah music 데이터를 모아
+// 아이템 분류기(순수 함수). 8개 엔드포인트 + Norviah music 데이터를 모아
 // 각 행에 버킷(__bucket)과 파생 플래그를 부여한다.
 //
-// 제외: 사진/포스터(주민용) · 미술품(도감용) · 모형 160(도감 토글용).
+// 사진(photos)은 NPC 액자만 포함 — 주민용 액자는 주민 페이지 🖼️ 토글로 관리하고,
+// 포스터는 제외(사용자 결정). 주민 판별은 주민 API 이름셋(villagerNames) 기준.
+// 제외: 주민용 사진·포스터 전체 · 미술품(도감용) · 모형 160(도감 토글용).
 // 정규화는 소문자+trim — furniture에 'Wall-Mounted'/'Wall-mounted' 대소문자 혼재 대응.
 
 import type {
-  Furniture, Clothing, Interior, Item, Tool, Gyroid, Art, Recipe,
+  Furniture, Clothing, Interior, Item, Tool, Gyroid, Art, Recipe, Photo,
   PriceEntry, Availability, Variation,
 } from './nookipedia'
 
 export type Bucket =
   | 'structures' | 'furniture' | 'misc' | 'wallmount'
   | 'interior' | 'clothing' | 'accessories' | 'bagshat'
-  | 'food' | 'music' | 'gyroids' | 'other'
+  | 'food' | 'music' | 'gyroids' | 'photos' | 'other'
 
 // 탭 노출 순서 + 한글 라벨
 export const BUCKET_ORDER: Bucket[] = [
   'furniture', 'misc', 'wallmount', 'structures', 'interior',
-  'clothing', 'accessories', 'bagshat', 'food', 'music', 'gyroids', 'other',
+  'clothing', 'accessories', 'bagshat', 'food', 'music', 'gyroids', 'photos', 'other',
 ]
 export const bucketLabel: Record<Bucket, string> = {
   structures: '내부구조',
@@ -31,6 +33,7 @@ export const bucketLabel: Record<Bucket, string> = {
   food: '음식',
   music: '음악',
   gyroids: '토용',
+  photos: '액자',
   other: '기타',
 }
 
@@ -124,6 +127,8 @@ export interface ClassifyInput {
   music: MusicMap
   art: Art[]
   recipes: Recipe[]
+  photos: Photo[]
+  villagerNames: Set<string> // 주민 API 이름(소문자) — 주민용 액자 제외 판별
   structureNames: Set<string> // interior-structures.json 키(소문자)
 }
 
@@ -208,7 +213,7 @@ function eventOf(
 }
 
 export function classify(input: ClassifyInput): ClassifyResult {
-  const { furniture, clothing, interior, items, tools, gyroids, music, art, recipes, structureNames } = input
+  const { furniture, clothing, interior, items, tools, gyroids, music, art, recipes, photos, villagerNames, structureNames } = input
 
   // 레시피 이름셋(__hasRecipe 판정) + 제작결과명→재료명 맵(시즌 이벤트 판정용)
   const recipeNames = new Set(recipes.map((r) => norm(r.name)))
@@ -280,6 +285,25 @@ export function classify(input: ClassifyInput): ClassifyResult {
   // ── 토용(gyroids) ──
   for (const g of gyroids) {
     rows.push(finalize({ ...g, __cat: 'gyroids', __bucket: 'gyroids' }))
+  }
+
+  // ── 사진(photos): NPC 액자만. 주민 데이터 미로딩(빈 셋)이면 전체 보류 —
+  //    빈 셋으로 판별하면 주민용 액자 830건이 NPC로 새어 나온다. ──
+  if (villagerNames.size > 0) {
+    for (const p of photos) {
+      if (norm(p.category) !== 'photos') continue // 포스터 제외
+      const m = norm(p.name).match(/^(.+)'s photo$/)
+      if (m && villagerNames.has(m[1])) continue // 주민용 액자 제외(주민 페이지에서 관리)
+      rows.push(
+        finalize({
+          ...p,
+          __cat: 'photos',
+          __bucket: 'photos',
+          // photos는 최상위 image_url이 없고 프레임 variations에만 있음 — 카드·모달 헤더용 폴백
+          image_url: p.image_url ?? p.variations?.[0]?.image_url,
+        }),
+      )
+    }
   }
 
   // ── 음악(music.json 합성 행) ──

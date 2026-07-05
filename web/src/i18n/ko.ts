@@ -208,10 +208,10 @@ export const sourceLabel: Record<string, string> = {
   Cyrus: '리포',
   'Daisy Mae': '무파니',
   Gulliver: '죠니',
-  Harvey: '빠삐용',
-  Leif: '잎새',
+  Harvey: '파니엘',
+  Leif: '늘봉',
   Pascal: '해탈한',
-  Jingle: '룰루',
+  Jingle: '루돌',
   Zipper: '토빗',
   'Pavé': '베르리나',
   Jack: '펌킹',
@@ -239,7 +239,7 @@ export const sourceLabel: Record<string, string> = {
   // 상점 / NPC / 시설
   'Able Sisters': '에이블 자매(의상실)',
   'apparel shop': '옷가게',
-  Kicks: '슈슈(신발가게)',
+  Kicks: '패트릭(신발가게)',
   "Nook's Cranny (upgraded)": '너굴 상점(확장)',
   'Nook Shopping': '너굴 쇼핑',
   NookLink: '너굴링크',
@@ -247,23 +247,23 @@ export const sourceLabel: Record<string, string> = {
   Tommy: '밤돌이',
   Saharah: '사하라',
   "Saharah's Co-Op": '사하라 협동조합',
-  "Redd's Raffle": '갸르송 추첨',
+  "Redd's Raffle": '여욱 추첨',
   Reese: '리사',
-  Label: '라벨',
-  Mabel: '마블',
-  "Kapp'n": '갈가펀',
+  Label: '고숙이',
+  Mabel: '고순이',
+  "Kapp'n": '갑돌',
   'C.J.': '저스틴',
   Flick: '레온',
   Wilbur: '로드리',
   Gullivarrr: '해적 죠니',
   Franklin: '프랭클린(추수감사절)',
-  Rover: '미파',
-  Luna: '루나(꿈섬)',
+  Rover: '낯선고양이',
+  Luna: '몽셰르(꿈섬)',
   Lloid: '로이드',
-  Resetti: '다람이',
-  Joan: '무파니 할머니',
-  Wardell: '와델',
-  Lottie: '로티',
+  Resetti: '도루묵씨',
+  Joan: '무파라',
+  Wardell: '너티',
+  Lottie: '솜이',
   Cornimer: '코니마',
   // 시설 / 장소
   'Bank of Nook': '너굴 은행',
@@ -301,10 +301,10 @@ export const sourceLabel: Record<string, string> = {
   'lucky red envelope': '세뱃돈 봉투',
   'otoshidama envelope': '세뱃돈 봉투',
   'bokjumeoni lucky pouch': '복주머니',
-  // 갸르송(Redd) 관련
-  Redd: '갸르송',
-  "Redd's Co-Op": '갸르송 협동조합',
-  "Jolly Redd's Treasure Trawler": '갸르송의 보물선',
+  // 여욱(Redd) 관련
+  Redd: '여욱',
+  "Redd's Co-Op": '여욱 협동조합',
+  "Jolly Redd's Treasure Trawler": '여욱의 보물선',
   // 기타
   Gift: '선물',
   mail: '우편',
@@ -318,12 +318,56 @@ export const noteLabel: Record<string, string> = {
   crafting: '제작',
   'high friendship': '높은 친밀도',
   birthday: '생일',
+  'may day': '메이데이(근로자의 날)',
+  'happy home paradise': '해피홈 파라다이스',
+  'interacting with the day after toy day': '토이데이(크리스마스) 다음 날 대화',
+  'complete his vacation home': '별장 완성(해피홈 파라다이스)',
+  'complete her vacation home': '별장 완성(해피홈 파라다이스)',
 }
+
+// NPC 공식 한글명(소문자 키). Norviah kRko 공식 번역(photos.json "X의 사진")에서 추출 —
+// NPC 액자의 "complete X's vacation home" 비고 변환용. 임의 음차 금지, 공식명만 추가할 것.
+const npcName: Record<string, string> = {
+  blanca: '아트고양이', blathers: '부엉', booker: '경찰관', brewster: '마스터',
+  'c.j.': '저스틴', celeste: '부옥', chip: '뚱달', copper: '경찰관', cyrus: '리포',
+  'daisy mae': '무파니', digby: '켄트', 'dj kk': 'DJ K.K.', don: '오루묵씨',
+  flick: '레온', franklin: '프랭클린', gracie: '그레이스', grams: '귀녀',
+  gulliver: '죠니', harriet: '카트리나', harvey: '파니엘', isabelle: '여울',
+  jack: '펌킹', jingle: '루돌', joan: '무파라', 'k.k.': 'K.K.', "kapp'n": '갑돌',
+  katie: '미야', katrina: '마추릴라', kicks: '패트릭', label: '고숙이', leif: '늘봉',
+  leila: '꼬미', leilani: '갑순', lottie: '솜이', luna: '몽셰르', lyle: '안심해씨',
+  mabel: '고순이', nat: '멜레옹', niko: '방글', orville: '모리', pascal: '해탈한',
+  'pavé': '베르리나', pelly: '펠리', pete: '펠리오', phineas: '파론티노',
+  phyllis: '펠리미', porter: '역무원', redd: '여욱', reese: '리사',
+  resetti: '도루묵씨', rover: '낯선고양이', sable: '고옥이', saharah: '사하라',
+  shrunk: '스승', 'timmy and tommy': '콩돌이&밤돌이', 'tom nook': '너굴',
+  tortimer: '고북', wardell: '너티', wendell: '고파유', wilbur: '로드리',
+  wisp: '깨빈', zipper: '토빗',
+}
+
 export function tNote(note?: string): string {
   if (!note) return ''
-  const lower = note.toLowerCase()
+  const cleaned = note.replace(/''/g, '').trim() // 위키 마크업 이탤릭('') 제거
+  const lower = cleaned.toLowerCase()
   const hit = Object.keys(noteLabel).find((k) => k.toLowerCase() === lower)
-  return hit ? noteLabel[hit] : note
+  if (hit) return noteLabel[hit]
+  // NPC 액자: "complete <NPC>'s vacation home" → "<NPC>의 별장 완성"
+  // 복수 표기("C.J. or Flick", "Grams, Kapp'n, Leila, or Leilani")와
+  // 경칭("Mr. Resetti", "Dr. Shrunk", "K.K. Slider")도 처리
+  const m = /^complete (.+)'s vacation home$/i.exec(cleaned)
+  if (m) {
+    const names = m[1]
+      .split(',')
+      .flatMap((part) => part.split(/\s+or\s+/i))
+      .map((s) => s.trim().replace(/^or\s+/i, ''))
+      .filter(Boolean)
+    const kos = names.map((n) => {
+      const key = n.replace(/^(?:mr|dr)\.\s+/i, '').replace(/^k\.k\. slider$/i, 'K.K.').toLowerCase()
+      return npcName[key] ?? tSource(n)
+    })
+    return kos.length > 1 ? `${kos.join('·')} 중 1명의 별장 완성` : `${kos[0]}의 별장 완성`
+  }
+  return cleaned
 }
 
 // 패턴 기반 변환(꽃/나무/작물 등 규칙적 항목)

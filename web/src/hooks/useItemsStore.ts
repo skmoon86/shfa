@@ -1,12 +1,13 @@
 import { useMemo } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { nookipedia } from '../lib/nookipedia'
-import type { Furniture, Clothing, Interior, Item, Tool, Gyroid, Art, Recipe } from '../lib/nookipedia'
+import type { Furniture, Clothing, Interior, Item, Tool, Gyroid, Art, Recipe, Photo, Villager } from '../lib/nookipedia'
 import { classify, type Bucket, type ItemRow, type MusicMap } from '../lib/itemBuckets'
 import { useItemCollection } from './useProgress'
 
-// 7개 엔드포인트(사진 제외) + recipes/art + music.json/interior-structures.json을
+// 8개 엔드포인트(photos는 NPC 액자만) + recipes/art + music.json/interior-structures.json을
 // 한 번 모아 분류기를 적용하는 통합 스토어. ItemsPage·HomePage·RecipesPage 공유.
+// villagers는 주민용 액자 제외 판별용 — 홈/주민 페이지와 동일 키·params라 캐시 공유.
 
 async function fetchJson<T>(path: string, fallback: T): Promise<T> {
   const res = await fetch(path)
@@ -32,9 +33,12 @@ export function useItemsStore() {
       { queryKey: ['nook', 'gyroids'], queryFn: () => nookipedia.gyroids() },
       { queryKey: ['nook', 'recipes'], queryFn: () => nookipedia.recipes() },
       { queryKey: ['nook', 'art'], queryFn: () => nookipedia.art() },
+      { queryKey: ['nook', 'photos'], queryFn: () => nookipedia.photos() },
+      { queryKey: ['nook', 'villagers'], queryFn: () => nookipedia.villagers({ nhdetails: true }) },
     ],
   })
-  const [furnitureQ, clothingQ, interiorQ, itemsQ, toolsQ, gyroidsQ, recipesQ, artQ] = results
+  // 신규 쿼리는 맨 끝에만 추가할 것 — 중간 삽입 시 구조분해 인덱스가 조용히 밀린다.
+  const [furnitureQ, clothingQ, interiorQ, itemsQ, toolsQ, gyroidsQ, recipesQ, artQ, photosQ, villagersQ] = results
 
   const musicQ = useQuery({
     queryKey: ['ko', 'music'],
@@ -64,12 +68,15 @@ export function useItemsStore() {
       music: musicQ.data ?? {},
       art: (artQ.data ?? []) as Art[],
       recipes: (recipesQ.data ?? []) as Recipe[],
+      photos: (photosQ.data ?? []) as Photo[],
+      villagerNames: new Set(((villagersQ.data ?? []) as Villager[]).map((v) => v.name.toLowerCase())),
       structureNames: new Set(Object.keys(structuresQ.data ?? {})),
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     furnitureQ.data, clothingQ.data, interiorQ.data, itemsQ.data, toolsQ.data,
-    gyroidsQ.data, musicQ.data, artQ.data, recipesQ.data, structuresQ.data,
+    gyroidsQ.data, musicQ.data, artQ.data, recipesQ.data, photosQ.data,
+    villagersQ.data, structuresQ.data,
   ])
 
   // 보유율(숨김 제외). rows를 받아 owned/total 계산.
