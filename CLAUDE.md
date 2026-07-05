@@ -78,6 +78,7 @@ supabase db push --password <DB비번>
 ## 작업 컨벤션
 - 변경 후 `cd web && npm run build`로 타입/빌드 검증.
 - 커밋 메시지는 한국어. push는 skmoon86 계정으로(원격 URL에 사용자명 포함: `https://skmoon86@github.com/...`) → Vercel 자동 배포.
+  - ⚠️ **push 인증 함정**: 자격 증명이 GCM에 없으면 push가 비밀번호 프롬프트에서 무한 대기(타임아웃)함. Claude가 `웹서비스관련정보.txt`에서 토큰을 꺼내는 것은 보안 분류기가 차단하므로, 이 경우 **사용자에게 `! git -C E:/fa push ...` 직접 실행을 요청**할 것(fetch는 인증 없이 됨 — 읽기 성공이 쓰기 성공을 보장하지 않음).
 - **DB 마이그레이션은 Claude가 직접 적용**: 마이그레이션 추가 후 `supabase db push --password <DB비번>` 실행(비번은 `웹서비스관련정보.txt`). 사용자에게 미루지 말 것. 마이그레이션 SQL은 재실행 가능하게 멱등(`if not exists`, `drop policy if exists`)으로 작성.
 
 ---
@@ -165,6 +166,7 @@ supabase db push --password <DB비번>
 
 ## 최근 작업 기록 — 2026-07-05 (4건 UI 개선)
 
+> 현재 `main` == `feature/six-features-rewrite` == `4488fa3`(원격 동기화·배포·실기기 확인 완료).
 > 요청 4건: ① 주민 메뉴 기본탭='내 주민' ② 아이템에 NPC 액자 표시(마스터 액자 등) ③ 홈 날씨배지 클릭→날씨 일별 화면 ④ 주민 필터 '액자 획득만'→'액자 미획득만'.
 
 ### NPC 액자 통합 (핵심·비자명)
@@ -187,5 +189,5 @@ supabase db push --password <DB비번>
 - ⭐ **sourceLabel NPC 오표기 14건 일괄 수정**(공식 kRko 대조): Redd 갸르송→**여욱**(추첨/협동조합/보물선 합성 라벨 포함), Lottie 로티→**솜이**, Kicks 슈슈→**패트릭**, Label→고숙이, Mabel→고순이, Kapp'n→갑돌, Rover→낯선고양이, Luna→몽셰르, Resetti→도루묵씨, Joan→무파라, Wardell→너티, Harvey→파니엘, Leif→늘봉, Jingle→루돌. ⚠️ `Daisy`(무파니)는 주민 데이지(바닐라)와 영문명 충돌인 **오탐이라 유지**, `Niko→해피홈 파라다이스`는 의도적 매핑이라 유지. 검증법: ko.ts를 esbuild 번들 → sourceLabel을 photos.json("X의 사진")과 대조.
 
 ### 남은 일 / TODO
-- [ ] 커밋·푸시(사용자 승인 대기). 빌드 통과, DB 변경 없음.
-- [ ] 실기기 확인: 아이템 '액자' 탭 62건 / 주민 기본탭 / 홈 배지→일별 시트(로그인+시드 필요라 자동검증 불가).
+- [x] 커밋·푸시 완료: `4488fa3` — feature/six-features-rewrite·main 동시 반영, Vercel 자동 배포.
+- [x] 실기기 확인 완료(2026-07-05 사용자 확인): 액자 탭·주민 기본탭·홈 배지→일별 시트 정상.
