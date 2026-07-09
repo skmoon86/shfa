@@ -19,7 +19,7 @@ import {
   style as styleKo,
   color as colorKo,
 } from '../i18n/terms'
-import { useKoNames } from '../hooks/useKoNames'
+import { useKoNames, useKoMap } from '../hooks/useKoNames'
 import { Sheet } from './Sheet'
 
 export function VillagerDetailModal({
@@ -37,6 +37,9 @@ export function VillagerDetailModal({
   const d = villager?.nh_details
   const koClothing = useKoNames('clothing')
   const koRecipe = useKoNames('recipes')
+  // 한국어 말버릇(ACNH Translations 시트 유래). 없으면 칸 자체를 숨김(영어 노출 방지)
+  const catchphrases = useKoMap('catchphrases')
+  const catchphrase = villager ? catchphrases[villager.name.toLowerCase().trim()] : undefined
 
   // 호감 선물 추정용 의류 + 성격 레시피 매칭용 레시피(둘 다 캐시 공유)
   const clothingQ = useQuery({
@@ -113,8 +116,9 @@ export function VillagerDetailModal({
           </button>
         </div>
 
-        {/* 취향 (대사·말버릇은 한국어 데이터가 없어 표시하지 않음) */}
+        {/* 취향·말버릇 (말버릇 한국어 데이터가 없는 주민은 칸 숨김) */}
         <div className="mb-4 grid grid-cols-3 gap-3 text-sm">
+          {catchphrase && <Info label="말버릇" value={`“${catchphrase}”`} />}
           <Info label="취미" value={tr(hobbyKo, d?.hobby)} />
           <Info label="호감 스타일" value={trList(styleKo, d?.fav_styles)} />
           <Info label="호감 색상" value={trList(colorKo, d?.fav_colors)} />

@@ -14,7 +14,7 @@
 - 프론트: **React + Vite + TS + Tailwind + TanStack Query + React Router** (`web/`)
 - 백엔드: **Supabase** (Auth=Google OAuth, Postgres+RLS, Edge Functions)
 - 데이터: **Nookipedia API** (Edge Function 프록시 경유, 키 숨김 + 캐시)
-- 한글 이름: **Norviah/animal-crossing** 데이터(`translations.kRko`)에서 추출
+- 한글 이름: **라이브 ACNH Translations 시트**(커뮤니티 데이터마인, 공식 텍스트·최신 콘텐츠 포함) + Norviah/animal-crossing(2022-01 박제 스냅샷 — music 이미지 등 보조) 병합. `scripts/gen-ko.mjs` 참조
 
 ```
 web/                         프론트엔드 (Vercel 배포, Root Directory = web)
@@ -38,8 +38,8 @@ cd web && npm install
 npm run dev            # http://localhost:5173
 npm run build          # tsc -b && vite build (타입체크 포함 — 변경 후 항상 실행)
 
-# 한글 이름 맵 재생성 (게임 업데이트/누락 보강 시)
-node scripts/gen-ko.mjs
+# 한글 이름 맵 재생성 (게임 업데이트/누락 보강 시) — 재실행 안전(수동 보강 보존)
+node scripts/gen-ko.mjs   # 4층 병합: Norviah → 기존 커밋맵 → 라이브 번역시트(공식) → scripts/ko-overrides.json(실측 확정)
 
 # PWA 아이콘 PNG 재생성 (web/public/icon-source.jpg 교체 시)
 cd web && node scripts/gen-icons.mjs   # sharp 사용. 원본 정사각 jpg를 각 사이즈로 리사이즈, 산출물(pwa-*.png) 커밋함
@@ -71,7 +71,7 @@ supabase db push --password <DB비번>
 - 주소창 제거하려면 서명키 SHA-256 지문으로 `assetlinks.json` 만들어 `web/public/.well-known/assetlinks.json`에 두고 배포(도메인 소유 확인).
 
 ## 알려진 한계
-- **주민 대사·말버릇**: 무료 데이터에 한국어가 없어 미표시(영어 노출 방지). 한국어 데이터셋 확보 시 추가 가능.
+- **주민 대사(quote)**: 한국어 데이터가 없어 미표시(영어 노출 방지). ~~말버릇~~은 2026-07-09 해소 — `ko/catchphrases.json`(번역 시트 유래)으로 주민 상세에 표시, 없는 주민은 칸 숨김.
 - **성격별 레시피**(`villagerRecipes.ts`): 위키 기반 대표 시드. 실제 존재하는 레시피만 한글로 표시. 정확도 높이려면 시드 보강.
 - **무료 Supabase**: 7일 미사용 시 일시정지(필요 시 pg_cron heartbeat).
 
@@ -200,4 +200,22 @@ supabase db push --password <DB비번>
 > 요청: 실게임과 다른 표기 수정 — ① 이벤트 샴록 데이→성 패트릭 ② 아이템·DIY 드롭다운에 성 패트릭 추가 ③ 파란 장미 화관 ④ 컬러풀 랜턴 아치 ⑤ 주민 튤리(Tulin)·미넬(Mineru).
 
 - **성 패트릭 이벤트 키 신설**: `itemBuckets.ts` EventKey/EVENT_ORDER에 `'shamrock'`(카니발 다음), `eventOf`는 from/note+이름 `/shamrock/` 매칭. `recipeCats.ts`도 동일 위치에 추가. 라이브 대조: 아이템 6건(문패·러그·의류4) + tools(소다·지팡이) + DIY 1건(성 패트릭 지팡이). `ko.ts` 이벤트 사전 `[/shamrock day/]` 라벨도 '성 패트릭'.
-- **⚠️ ko/*.json 수동 치환 5종 — `gen-ko.mjs` 재생성 시 원복됨**(Norviah kRko 원본과 다름): `blue rose crown`→파란 장미 화관(clothing·recipes), `colorful-lantern arch`→컬러풀 랜턴 아치(furniture), `tulin`→튤리·`mineru`→미넬(villagers + photos 사진/포스터 4건 + clothing 의상 2건). 재생성 후 이 값들 유지 확인 필요(콜라보 주민 4명 유실 경고와 동일 맥락). 사용자가 실게임 화면 기준으로 지정한 표기.
+- ~~ko/*.json 수동 치환 원복 경고~~ → **같은 날 gen-ko.mjs 재작성으로 해소**(아래 기록): 라이브 시트가 튤리·미넬·컬러풀 랜턴 아치를 공식 보유, `blue rose crown`만 `scripts/ko-overrides.json`으로 고정. 사용자가 실게임 화면 기준으로 지정한 표기.
+
+---
+
+## 최근 작업 기록 — 2026-07-09 (2R: gen-ko 라이브 시트 전환 + 말버릇)
+
+> 발단: "게임과 이름이 왜 다르냐" → 조사 결과 Norviah 스냅샷이 **2022-01에 박제**(마지막 커밋), 그 원본인 **라이브 ACNH Translations 구글 시트**(id `1MMbsvDfu59OY9YBEAfHhFJ6O8vRTllNFgMrX7RBZuyI`)는 콜라보 콘텐츠까지 공식 한국어 보유(튤리·미넬·컬러풀 랜턴 아치·성 패트릭 데이 검증 완료).
+
+### gen-ko.mjs 재작성 — 4층 병합 (재실행 안전·멱등)
+- ① Norviah(기본층) → ② 기존 커밋된 ko/*.json(수동 보강 보존) → ③ 라이브 시트 CSV(공식, gid 하드코딩) → ④ `scripts/ko-overrides.json`(게임 실측 확정 — 현재 blue rose crown=파란 장미 화관 1건).
+- ⭐ **동명이인 함정(직접 겪음)**: 주민 Apple/Cherry/Clay/Boots/Anchovy/Rocket이 같은 영문명의 과일·점토·장화·물고기·가구·DIY를 덮어씀 → 탭별 `scope` 제한 + **여러 파일에 있는 키는 그 탭의 `targets` 파일만 갱신**(가구 '탱크' vs 의류 '탱크톱'). `sheetNames`(레시피명 해석 사전)에는 아이템류 탭만 넣을 것(주민 Rocket=4호가 DIY '로켓' 오염).
+- 값 검증: KRko에 가나/한자 = 미번역 행 → 스킵. 신규 추가는 한글 포함 값만(내부 플레이스홀더 `FtrOneroomBox*`·영문=원문 차단). 공식이 영문인 항목(Famicom·Nintendo Switch·LEGO® 등)은 기존 키 갱신으로만 반영(게임 표기 그대로).
+- recipes.json은 프록시 `/nh/recipes` 실명단 기준으로만 생성(파일 비대 방지, web/.env 필요·실패 시 기존 키 유지).
+- 결과: 갱신 ~180건(젤다 하일리아의/영걸, 스플래툰 어메이징 캐비닛·메기 지구, artful→동양풍 모던, tubular→와이어, kiddie→어린이용, cece 체체→**나기사**·viché 비셰→**미사키** 등) + 추가 ~580건(다리/계단, 부활절 재료, **심어진 자연물**(사과나무·침엽수·모종 — Nookipedia API엔 없어 아직 미표시, 이름은 확보)).
+- 검증법: 스크래치패드 diff 스크립트로 git HEAD 대비 전키 비교(변경/추가/삭제/비한글 플래그) — 삭제 0 확인 후 커밋.
+
+### 말버릇(catchphrase) 표시 — 알려진 한계 1건 해소
+- `ko/catchphrases.json` 신규(주민 영문명→한국어 말버릇 419건, 시트 Villagers+Villager Catchphrases를 Id 조인). PWA 프리캐시 글롭(ko/*.json)에 자동 포함.
+- `useKoNames.ts`에 `useKoMap`(원본 맵, **영문 폴백 없음**) 추가 — 말버릇은 없으면 칸 숨김이라 useKoNames(원문 폴백=영어 노출)로는 부적합. `VillagerDetailModal` 취향 그리드에 "말버릇" 칸(있을 때만).

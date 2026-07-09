@@ -1,0 +1,9 @@
+{
+  "_comment": "게임 실기기에서 확인한 확정 표기. 번역 시트(ACNH Translations)가 낡았거나 다른 항목만 등록 — gen-ko.mjs 최종 단계에서 덮어씀. 형식: { \"<카테고리파일>\": { \"<영문명 소문자>\": \"<한글>\" } }",
+  "clothing": {
+    "blue rose crown": "파란 장미 화관"
+  },
+  "recipes": {
+    "blue rose crown": "파란 장미 화관"
+  }
+}

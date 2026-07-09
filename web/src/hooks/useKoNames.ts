@@ -23,6 +23,19 @@ export function useKoNames(category: string) {
   }
 }
 
+// 슬림 맵을 원본 그대로 반환(영문 폴백 없음). 말버릇처럼 "없으면 숨김"이
+// 필요한 곳에서 사용 — useKoNames 의 원문 폴백은 영어 노출이 돼 부적합.
+export function useKoMap(category: string): Record<string, string> {
+  const { data } = useQuery({
+    queryKey: ['ko', category],
+    queryFn: () => fetchKo(category),
+    staleTime: Infinity,
+    gcTime: Infinity,
+    retry: false,
+  })
+  return data ?? {}
+}
+
 // 여러 카테고리를 동시에 로드. 반환값은 ko(name, category) 함수.
 export function useKoNamesMulti(categories: string[]) {
   const results = useQueries({
