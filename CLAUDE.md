@@ -191,3 +191,13 @@ supabase db push --password <DB비번>
 ### 남은 일 / TODO
 - [x] 커밋·푸시 완료: `4488fa3` — feature/six-features-rewrite·main 동시 반영, Vercel 자동 배포.
 - [x] 실기기 확인 완료(2026-07-05 사용자 확인): 액자 탭·주민 기본탭·홈 배지→일별 시트 정상.
+
+---
+
+## 최근 작업 기록 — 2026-07-09 (게임 표기 맞춤 5건)
+
+> 현재 `main` == `feature/six-features-rewrite` == `805985a`(원격 동기화 완료, Vercel 자동 배포).
+> 요청: 실게임과 다른 표기 수정 — ① 이벤트 샴록 데이→성 패트릭 ② 아이템·DIY 드롭다운에 성 패트릭 추가 ③ 파란 장미 화관 ④ 컬러풀 랜턴 아치 ⑤ 주민 튤리(Tulin)·미넬(Mineru).
+
+- **성 패트릭 이벤트 키 신설**: `itemBuckets.ts` EventKey/EVENT_ORDER에 `'shamrock'`(카니발 다음), `eventOf`는 from/note+이름 `/shamrock/` 매칭. `recipeCats.ts`도 동일 위치에 추가. 라이브 대조: 아이템 6건(문패·러그·의류4) + tools(소다·지팡이) + DIY 1건(성 패트릭 지팡이). `ko.ts` 이벤트 사전 `[/shamrock day/]` 라벨도 '성 패트릭'.
+- **⚠️ ko/*.json 수동 치환 5종 — `gen-ko.mjs` 재생성 시 원복됨**(Norviah kRko 원본과 다름): `blue rose crown`→파란 장미 화관(clothing·recipes), `colorful-lantern arch`→컬러풀 랜턴 아치(furniture), `tulin`→튤리·`mineru`→미넬(villagers + photos 사진/포스터 4건 + clothing 의상 2건). 재생성 후 이 값들 유지 확인 필요(콜라보 주민 4명 유실 경고와 동일 맥락). 사용자가 실게임 화면 기준으로 지정한 표기.
