@@ -3,7 +3,7 @@
 import type { Recipe } from './nookipedia'
 
 export const RECIPE_CAT_ORDER = [
-  'carnival', 'easter', 'wedding', 'fireworks', 'halloween', 'turkey', 'christmas',
+  'carnival', 'shamrock', 'easter', 'wedding', 'fireworks', 'halloween', 'turkey', 'christmas',
   'cherry', 'shell', 'acorn', 'mushroom', 'maple', 'snow', 'ornament',
   'npc_brewster', 'npc_daisymae', 'npc_flick', 'npc_cj', 'npc_celeste', 'npc_gulliver', 'npc_pascal', 'npc_mom',
   'vil_smug', 'vil_sisterly', 'vil_lazy', 'vil_peppy', 'vil_cranky', 'vil_snooty', 'vil_jock', 'vil_normal',
@@ -12,7 +12,7 @@ export const RECIPE_CAT_ORDER = [
 export type RecipeCat = (typeof RECIPE_CAT_ORDER)[number]
 
 export const recipeCatLabel: Record<RecipeCat, string> = {
-  carnival: '카니발:베르리나', easter: '이스터(부활절):토빗', wedding: '웨딩:리포&리사',
+  carnival: '카니발:베르리나', shamrock: '성 패트릭', easter: '이스터(부활절):토빗', wedding: '웨딩:리포&리사',
   fireworks: '불꽃 축제', halloween: '할로윈:펌킹', turkey: '추수감사절', christmas: '크리스마스',
   cherry: '대나무&벚꽃', shell: '여름 조개껍데기', acorn: '도토리&솔방울', mushroom: '버섯',
   maple: '단풍잎', snow: '눈사람', ornament: '오너먼트',
@@ -40,6 +40,7 @@ export function recipeCatOf(r: Recipe): RecipeCat {
 
   // 명절/행사(소스 NPC·이벤트)
   if (f(/festivale|pav[eé]/)) return 'carnival'
+  if (f(/shamrock/) || n(/shamrock/)) return 'shamrock'
   if (f(/bunny day|zipper/)) return 'easter'
   if (f(/wedding|\bcyrus\b|\breese\b/)) return 'wedding'
   if (f(/fireworks/)) return 'fireworks'

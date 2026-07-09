@@ -40,7 +40,7 @@ export const bucketLabel: Record<Bucket, string> = {
 // 이벤트/시리즈 분류. availability(from/note) + item_series + 이름 + (제작 시)레시피 재료를 종합 판정.
 // 아이템 페이지 '이벤트' 드롭다운을 대체. 사용자 지정 33종 + 미매칭은 'etc'(드롭다운 미노출).
 export type EventKey =
-  | 'valentine' | 'festivale' | 'bunny' | 'mayday' | 'museum' | 'wedding'
+  | 'valentine' | 'festivale' | 'shamrock' | 'bunny' | 'mayday' | 'museum' | 'wedding'
   | 'fireworks' | 'halloween' | 'turkey' | 'toyday' | 'countdown'
   | 'cherry' | 'shell' | 'acorn' | 'mushroom' | 'maple' | 'snow' | 'ornament'
   | 'bugoff' | 'fishing' | 'celeste' | 'brewster' | 'gullivarrr' | 'pascal' | 'hotel'
@@ -50,7 +50,7 @@ export type EventKey =
 
 // 드롭다운 노출 순서(사용자 지정). 'etc'는 목록에서 제외(전체에서만 노출).
 export const EVENT_ORDER: EventKey[] = [
-  'valentine', 'festivale', 'bunny', 'mayday', 'museum', 'wedding',
+  'valentine', 'festivale', 'shamrock', 'bunny', 'mayday', 'museum', 'wedding',
   'fireworks', 'halloween', 'turkey', 'toyday', 'countdown',
   'cherry', 'shell', 'acorn', 'mushroom', 'maple', 'snow', 'ornament',
   'bugoff', 'fishing', 'celeste', 'brewster', 'gullivarrr', 'pascal', 'hotel',
@@ -58,7 +58,7 @@ export const EVENT_ORDER: EventKey[] = [
   'sanrio', 'mario', 'zelda', 'splatoon', 'lego', 'pocketcamp',
 ]
 export const itemEventLabel: Record<EventKey, string> = {
-  valentine: '밸런타인데이', festivale: '카니발', bunny: '이스터(부활절)', mayday: '근로자의 날(메이데이)',
+  valentine: '밸런타인데이', festivale: '카니발', shamrock: '성 패트릭', bunny: '이스터(부활절)', mayday: '근로자의 날(메이데이)',
   museum: '국제 박물관의 날', wedding: '웨딩 이벤트', fireworks: '불꽃 축제', halloween: '할로윈',
   turkey: '추수감사절', toyday: '크리스마스', countdown: '새해 카운트다운',
   cherry: '대나무&벚꽃', shell: '여름 조개껍데기', acorn: '도토리&솔방울', mushroom: '버섯',
@@ -178,6 +178,7 @@ function eventOf(
 
   if (f(/valentine/)) return 'valentine'
   if (f(/festivale|pav[eé]/) || s('festivale')) return 'festivale'
+  if (f(/shamrock/) || /shamrock/.test(name)) return 'shamrock'
   if (f(/bunny day|zipper/) || s('bunny day')) return 'bunny'
   if (f(/may day/)) return 'mayday'
   if (f(/museum day/)) return 'museum'

@@ -468,7 +468,7 @@ const EVENT_TERMS: [RegExp, string][] = [
   [/father'?s day/, '아버지의 날'],
   [/children'?s day/, '어린이날'],
   [/april fools'? day/, '만우절'],
-  [/shamrock day/, '샴록 데이'],
+  [/shamrock day/, '성 패트릭'],
   [/day of the dead/, '망자의 날'],
   [/new year'?s eve/, '섣달그믐'],
   [/new year'?s day/, '새해'],
