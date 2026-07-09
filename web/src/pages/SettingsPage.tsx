@@ -144,8 +144,10 @@ export function SettingsPage() {
     }
     setProgress(null)
     setRunning(false)
-    // 저장본·메타 갱신 반영
+    // 저장본·메타 갱신 반영 (+ 한글맵도 재요청 — '전체 데이터 갱신' 기대에 맞춤.
+    // ko 쿼리는 staleTime Infinity 라 invalidate 없이는 영영 안 바뀐다)
     await queryClient.invalidateQueries({ queryKey: ['nook'] })
+    await queryClient.invalidateQueries({ queryKey: ['ko'] })
     await metaQ.refetch()
   }
 

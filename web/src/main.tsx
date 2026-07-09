@@ -15,7 +15,9 @@ createRoot(document.getElementById('root')!).render(
       persistOptions={{
         persister: idbPersister,
         maxAge: Infinity, // 저장본은 갱신 버튼으로만 바뀌므로 만료시키지 않음
-        buster: 'nook-v1', // 데이터 구조 변경 시 이 값을 올려 영속 캐시 무효화
+        // 데이터 구조·번들 데이터(ko 한글맵 등) 변경 시 이 값을 올려 영속 캐시 무효화.
+        // v2: 2026-07-09 한글맵 라이브 시트 전환(공식 표기 ~180건 갱신) 반영
+        buster: 'nook-v2',
         dehydrateOptions: {
           // nook(저장본)·ko(한글맵)만 영속. auth/Supabase 진행상황은 제외.
           shouldDehydrateQuery: (q) => {
