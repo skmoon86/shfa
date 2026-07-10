@@ -219,3 +219,7 @@ supabase db push --password <DB비번>
 ### 말버릇(catchphrase) 표시 — 알려진 한계 1건 해소
 - `ko/catchphrases.json` 신규(주민 영문명→한국어 말버릇 419건, 시트 Villagers+Villager Catchphrases를 Id 조인). PWA 프리캐시 글롭(ko/*.json)에 자동 포함.
 - `useKoNames.ts`에 `useKoMap`(원본 맵, **영문 폴백 없음**) 추가 — 말버릇은 없으면 칸 숨김이라 useKoNames(원문 폴백=영어 노출)로는 부적합. `VillagerDetailModal` 취향 그리드에 "말버릇" 칸(있을 때만).
+
+### 후속 (같은 날 3R + 실기기 확인)
+- **영속 캐시 함정 수정**(`787e2d9`): ko 한글맵이 IndexedDB persist(maxAge/staleTime Infinity)라 배포해도 기존 기기에 새 이름이 영영 미반영 → `main.tsx` buster `nook-v2`(1회 자동 재적재) + 설정 '전체 데이터 갱신'이 `['ko']`도 invalidate. **ko/*.json 값을 바꾸는 배포는 buster를 올릴 것.**
+- [x] **실기기 확인 완료(2026-07-10 사용자)**: 새 한글 표기·말버릇 정상. `blue rose crown`=파란 장미 화관 오버라이드 및 cece=나기사·viché=미사키 공식 표기 확정.
